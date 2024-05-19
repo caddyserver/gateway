@@ -1,0 +1,28 @@
+name: nix
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  flake-check:
+    name: flake check
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+    steps:
+      - name: Code checkout
+        uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4.1.6
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@8cdf194da984e4f12b2f8c36d1fa107c1dd67f5c # v11
+
+      - name: Nix Cache
+        uses: DeterminateSystems/magic-nix-cache-action@87e8236f46702ab0ce5a058b605a173ec88d618e # v6
+
+      - name: nix flake check
+        run: nix flake check --all-systems
