@@ -20,7 +20,8 @@ builds:
       - -trimpath
 
 kos:
-  - repository: ghcr.io/caddyserver/gateway
+  - main: ./cmd
+    repository: ghcr.io/caddyserver/gateway
     platforms:
       - linux/amd64
       - linux/arm64
