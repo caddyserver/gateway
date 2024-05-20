@@ -80,6 +80,8 @@ jobs:
     uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@v2.0.0
     with:
       base64-subjects: "${{ needs.goreleaser.outputs.hashes }}"
+      provenance-name: "provenance.intoto.jsonl"
       upload-assets: true
       # Use the existing release created by Goreleaser instead of creating another.
       upload-tag-name: "${{ needs.goreleaser.outputs.tag_name }}"
+      draft-release: true
