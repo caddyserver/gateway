@@ -88,18 +88,46 @@ docker_signs:
       - --yes
       - "${artifact}"
 
-release:
-  draft: true
-  prerelease: auto
-
 changelog:
   use: github
   sort: asc
   filters:
     exclude:
-    - '^chore:'
-    - '^ci:'
-    - '^docs?:'
-    - '^readme:'
-    - '^tests?:'
-    - '^\w+\s+' # a hack to remove commit messages without colons thus don't correspond to a package
+      - '^chore(:|\\()'
+      - '^perf(:|\\()'
+      - '^readme(:|\\()'
+      - '^refactor(:|\\()'
+      - '^style(:|\\()'
+      - '^tests?(:|\\()'
+      - '^\w+\s+' # a hack to remove commit messages without colons thus don't correspond to a package
+  groups:
+    - title: Added
+      regexp: '^.*?feat(\(.+\))??!?:.+$'
+      order: 100
+    # Changed
+    # Deprecated
+    # Removed
+    - title: Fixed
+      regexp: '^.*?fix(\(.+\))??!?:.+$'
+      order: 500
+    - title: Security
+      regexp: '^.*?sec(\(.+\))??!?:.+$'
+      order: 600
+    - title: Dependencies
+      regexp: '^.*?chore\(deps\)!?:.+$'
+      order: 700
+    - title: Documentation
+      regexp: ^.*?docs?(\(.+\))??!?:.+$
+      order: 800
+    - title: CI
+      regexp: ^.*?(build|ci)(\(.+\))??!?:.+$
+      order: 900
+    - title: Other work
+      order: 9999
+
+release:
+  draft: true
+  prerelease: auto
+  footer: |
+    <!-- {{ .GitURL }} -->
+    **Full Changelog**: https://github.com/caddyserver/gateway/compare/{{ .PreviousTag }}...{{ .Tag }}
