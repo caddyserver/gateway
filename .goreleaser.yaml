@@ -12,9 +12,7 @@ metadata:
 report_sizes: true
 
 builds:
-  - dir: ./cmd
-    main: .
-    binary: caddy-gateway
+  - binary: caddy-gateway
     env:
       - CGO_ENABLED=0
     goos:

@@ -11,7 +11,7 @@ import (
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	"github.com/caddyserver/gateway"
+	gateway "github.com/caddyserver/gateway/internal"
 	"github.com/caddyserver/gateway/internal/caddyv2/caddytls"
 )
 

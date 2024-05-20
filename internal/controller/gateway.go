@@ -37,7 +37,7 @@ import (
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	"github.com/caddyserver/gateway"
+	gateway "github.com/caddyserver/gateway/internal"
 	"github.com/caddyserver/gateway/internal/caddy"
 )
 

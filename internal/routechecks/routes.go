@@ -11,7 +11,7 @@ import (
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
-	"github.com/caddyserver/gateway"
+	gateway "github.com/caddyserver/gateway/internal"
 )
 
 func CheckAgainstCrossNamespaceBackendReferences(input Input) (bool, error) {
