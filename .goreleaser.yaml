@@ -7,7 +7,7 @@ metadata:
 report_sizes: true
 
 builds:
-  - main: github.com/caddyserver/gateway/cmd
+  - main: ./cmd
     binary: caddy-gateway
     env:
       - CGO_ENABLED=0
@@ -20,8 +20,7 @@ builds:
       - -trimpath
 
 kos:
-  - main: ./cmd
-    repository: ghcr.io/caddyserver/gateway
+  - repository: ghcr.io/caddyserver/gateway
     platforms:
       - linux/amd64
       - linux/arm64
