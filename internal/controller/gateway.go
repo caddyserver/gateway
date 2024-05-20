@@ -299,7 +299,6 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		log.Error(err, "Error generating Gateway config")
 		return ctrl.Result{}, err
 	}
-	fmt.Println(string(b))
 
 	caddyEps, err := r.getEndpoints(ctx, gw)
 	if err != nil {
