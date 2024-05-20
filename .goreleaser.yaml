@@ -4,10 +4,13 @@ version: 1
 before:
   hooks:
     - go mod tidy
-    - /bin/bash -c 'if [ -n "$(git --no-pager diff --exit-code go.mod go.sum)" ]; then exit 1; fi'
+    - bash -c 'if [ -n "$(git --no-pager diff --exit-code go.mod go.sum)" ]; then exit 1; fi'
 
 metadata:
   mod_timestamp: "{{ .CommitTimestamp }}"
+
+gomod:
+  proxy: true
 
 report_sizes: true
 
@@ -33,18 +36,26 @@ kos:
     tags:
       - '{{.Tag}}'
       # TODO: find a way to set the latest package tag, only when the release gets published on GitHub.
-      # we can trigger an action on release_published, but we then need to write a system that "pushes"
+      # We can trigger an action on release_published, but we then need to write a system that "pushes"
       # the `latest` manifest.
       - '{{ if not .Prerelease }}latest{{ end }}'
-    creation_time: '{{.CommitTimestamp}}'
-    ko_data_creation_time: '{{.CommitTimestamp}}'
+    creation_time: '{{ .CommitTimestamp }}'
+    ko_data_creation_time: '{{ .CommitTimestamp }}'
     sbom: 'spdx'
     bare: true
     preserve_import_paths: false
+    labels:
+      org.opencontainers.image.description: "Kubernetes Gateway API implementation powered by Caddy"
+      org.opencontainers.image.licenses: Apache-2.0"
+      org.opencontainers.image.created: "{{ .Date }}"
+      org.opencontainers.image.name: "{{ .ProjectName }}"
+      org.opencontainers.image.revision: "{{ .FullCommit }}"
+      org.opencontainers.image.source: "{{ .GitURL }}"
+      org.opencontainers.image.version: "{{ .Version }}"
 
 checksum:
   algorithm: sha256
-  name_template: "CHECKSUMS.txt"
+  name_template: "checksums.txt"
 
 sboms:
   - artifacts: binary

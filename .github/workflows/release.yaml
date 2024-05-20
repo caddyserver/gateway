@@ -84,4 +84,5 @@ jobs:
       upload-assets: true
       # Use the existing release created by Goreleaser instead of creating another.
       upload-tag-name: "${{ needs.goreleaser.outputs.tag_name }}"
+      # Ensure the release is a draft and doesn't create a new release that is published.
       draft-release: true
