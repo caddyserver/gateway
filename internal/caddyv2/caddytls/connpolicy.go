@@ -66,12 +66,14 @@ type ConnectionPolicy struct {
 
 // ClientAuthentication configures TLS client auth.
 type ClientAuthentication struct {
+	// DEPRECATED: Use the `ca` field with the `tls.ca_pool.source.inline` module instead.
 	// A list of base64 DER-encoded CA certificates
 	// against which to validate client certificates.
 	// Client certs which are not signed by any of
 	// these CAs will be rejected.
 	TrustedCACerts []string `json:"trusted_ca_certs,omitempty"`
 
+	// DEPRECATED: Use the `ca` field with the `tls.ca_pool.source.file` module instead.
 	// TrustedCACertPEMFiles is a list of PEM file names
 	// from which to load certificates of trusted CAs.
 	// Client certificates which are not signed by any of
@@ -80,7 +82,7 @@ type ClientAuthentication struct {
 
 	// DEPRECATED: This field is deprecated and will be removed in
 	// a future version. Please use the `validators` field instead
-	// with the tls.client_auth.leaf module instead.
+	// with the tls.client_auth.verifier.leaf module instead.
 	//
 	// A list of base64 DER-encoded client leaf certs
 	// to accept. If this list is not empty, client certs

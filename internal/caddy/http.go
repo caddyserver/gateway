@@ -392,7 +392,9 @@ func (i *Input) getHTTPServer(s *caddyhttp.Server, l gatewayv1.Listener) (*caddy
 									certs = append(certs, base64.StdEncoding.EncodeToString(block.Bytes))
 								}
 							}
-							tls.RootCAPool = certs
+							tls.CA = caddytls.InlineCAPool{
+								TrustedCACerts: certs,
+							}
 						}
 						// Caddy will default to using system trust for TLS if
 						// we don't override the pool.

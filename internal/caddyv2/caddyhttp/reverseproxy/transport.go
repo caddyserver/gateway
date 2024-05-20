@@ -5,6 +5,7 @@ package reverseproxy
 
 import (
 	caddy "github.com/caddyserver/gateway/internal/caddyv2"
+	"github.com/caddyserver/gateway/internal/caddyv2/caddytls"
 )
 
 type Transport interface {
@@ -91,9 +92,14 @@ func (HTTPTransport) IAmATransport() {}
 // TLSConfig holds configuration related to the TLS configuration for the
 // transport/client.
 type TLSConfig struct {
+	// Certificate authority module which provides the certificate pool of trusted certificates
+	CA caddytls.CA `json:"ca,omitempty"`
+
+	// DEPRECATED: Use the `ca` field with the `tls.ca_pool.source.inline` module instead.
 	// Optional list of base64-encoded DER-encoded CA certificates to trust.
 	RootCAPool []string `json:"root_ca_pool,omitempty"`
 
+	// DEPRECATED: Use the `ca` field with the `tls.ca_pool.source.file` module instead.
 	// List of PEM-encoded CA certificate files to add to the same trust
 	// store as RootCAPool (or root_ca_pool in the JSON).
 	RootCAPEMFiles []string `json:"root_ca_pem_files,omitempty"`
