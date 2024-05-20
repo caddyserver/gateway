@@ -129,5 +129,4 @@ release:
   draft: true
   prerelease: auto
   footer: |
-    <!-- {{ .GitURL }} -->
-    **Full Changelog**: https://github.com/caddyserver/gateway/compare/{{ .PreviousTag }}...{{ .Tag }}
+    **Full Changelog**: {{ .GitURL }}/compare/{{ .PreviousTag }}...{{ .Tag }}
