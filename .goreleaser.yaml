@@ -93,12 +93,12 @@ changelog:
   sort: asc
   filters:
     exclude:
-      - '^chore(:|\\()'
-      - '^perf(:|\\()'
-      - '^readme(:|\\()'
-      - '^refactor(:|\\()'
-      - '^style(:|\\()'
-      - '^tests?(:|\\()'
+      - '^chore(:|\()'
+      - '^perf(:|\()'
+      - '^readme(:|\()'
+      - '^refactor(:|\()'
+      - '^style(:|\()'
+      - '^tests?(:|\()'
       - '^\w+\s+' # a hack to remove commit messages without colons thus don't correspond to a package
   groups:
     - title: Added
