@@ -56,14 +56,17 @@ jobs:
         id: slsa
         env:
           ARTIFACTS: "${{ steps.run-goreleaser.outputs.artifacts }}"
+          METADATA: "${{ steps.run-goreleaser.outputs.metadata }}"
         run: |
           set -euo pipefail
 
-          checksum_file=$(echo "$ARTIFACTS" | jq -r '.[] | select (.type == "Checksum") | .path')
+          checksum_file=$(echo "${ARTIFACTS}" | jq -r '.[] | select (.type == "Checksum") | .path')
           echo "hashes=$(cat $checksum_file | base64 -w0)" >> "$GITHUB_OUTPUT"
+          tag_name=$(echo "${METADATA}" | jq -r '.tag')
+          echo "tag_name=${tag_name}" >> "$GITHUB_OUTPUT"
     outputs:
-      hashes: ${{ steps.slsa.outputs.hashes }}
-      # tag_name: ${{ steps.tag.outputs.tag_name }}
+      hashes: "${{ steps.slsa.outputs.hashes }}"
+      tag_name: "${{ steps.slsa.outputs.tag_name }}"
 
   provenance:
     name: Provenance
@@ -78,3 +81,5 @@ jobs:
     with:
       base64-subjects: "${{ needs.goreleaser.outputs.hashes }}"
       upload-assets: true
+      # Use the existing release created by Goreleaser instead of creating another.
+      upload-tag-name: "${{ needs.goreleaser.outputs.tag_name }}"

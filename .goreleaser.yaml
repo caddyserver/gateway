@@ -43,14 +43,14 @@ kos:
     preserve_import_paths: false
 
 checksum:
-  algorithm: sha512
+  algorithm: sha256
   name_template: "CHECKSUMS.txt"
 
 sboms:
   - artifacts: binary
     cmd: syft
     args:
-      - "$artifact"
+      - "${artifact}"
       - "--file"
       - "${document}"
       - "--output"
