@@ -1,13 +1,19 @@
 # yaml-language-server: $schema=https://goreleaser.com/static/schema.json
 version: 1
 
+before:
+  hooks:
+    - go mod tidy
+    - /bin/bash -c 'if [ -n "$(git --no-pager diff --exit-code go.mod go.sum)" ]; then exit 1; fi'
+
 metadata:
   mod_timestamp: "{{ .CommitTimestamp }}"
 
 report_sizes: true
 
 builds:
-  - main: ./cmd
+  - dir: ./cmd
+    main: .
     binary: caddy-gateway
     env:
       - CGO_ENABLED=0
@@ -74,9 +80,6 @@ docker_signs:
 release:
   draft: true
   prerelease: auto
-  github:
-    owner: caddyserver
-    name: gateway
 
 changelog:
   use: github
