@@ -44,6 +44,7 @@ kos:
     sbom: 'spdx'
     bare: true
     preserve_import_paths: false
+    base_image: "gcr.io/distroless/static-debian12:nonroot"
     labels:
       org.opencontainers.image.description: "Kubernetes Gateway API implementation powered by Caddy"
       org.opencontainers.image.licenses: Apache-2.0"
