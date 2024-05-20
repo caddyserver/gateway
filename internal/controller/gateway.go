@@ -84,6 +84,7 @@ func (r *GatewayReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Config: &tls.Config{
 			RootCAs: r.rootCAs,
 		},
+		DontStaple: true,
 	}
 	r.tlsConfig, err = r.certwatcher.GetTLSConfig(context.Background())
 	if err != nil {
