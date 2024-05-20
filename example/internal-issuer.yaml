@@ -1,0 +1,38 @@
+# https://cert-manager.io/docs/configuration/selfsigned/#bootstrapping-ca-issuers
+---
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: selfsigned
+  namespace: caddy-system
+spec:
+  selfSigned: {}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: caddy-selfsigned-ca
+  namespace: cert-manager
+spec:
+  isCA: true
+  commonName: caddy-selfsigned-ca
+  secretName: caddy-selfsigned-ca
+  subject:
+    organizations:
+      - caddy-system
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+  issuerRef:
+    group: cert-manager.io
+    kind: Issuer
+    name: selfsigned
+---
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: caddy
+  namespace: caddy-system
+spec:
+  ca:
+    secretName: caddy-selfsigned-ca

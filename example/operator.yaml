@@ -1,0 +1,349 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: caddy-system
+  labels:
+    app.kubernetes.io/name: caddy-system
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/enforce-version: latest
+    pod-security.kubernetes.io/audit: restricted
+    pod-security.kubernetes.io/audit-version: latest
+    pod-security.kubernetes.io/warn: restricted
+    pod-security.kubernetes.io/warn-version: latest
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: caddy-gateway
+  namespace: caddy-system
+  labels:
+    app.kubernetes.io/name: caddy-gateway
+    app.kubernetes.io/component: operator
+    app.kubernetes.io/instance: caddy-system
+    app.kubernetes.io/part-of: caddy-system
+automountServiceAccountToken: false
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: caddy-system:caddy-gateway
+  labels:
+    app.kubernetes.io/name: caddy-gateway
+    app.kubernetes.io/component: operator
+    app.kubernetes.io/instance: caddy-system
+    app.kubernetes.io/part-of: caddy-system
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - configmaps
+      - endpoints
+      - namespaces
+      - secrets
+      - services
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - apiextensions.k8s.io
+    resources:
+      - customresourcedefinitions
+    verbs:
+      - get
+  - apiGroups:
+      - gateway.networking.k8s.io
+    resources:
+      - backendtlspolicies
+      - gatewayclasses
+      - gateways
+      - grpcroutes
+      - httproutes
+      - referencegrants
+      - tcproutes
+      - tlsroutes
+      - udproutes
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - gateway.networking.k8s.io
+    resources:
+      - backendtlspolicies/finalizers
+      - gatewayclasses/finalizers
+      - gateways/finalizers
+      - grpcroutes/finalizers
+      - httproutes/finalizers
+      - referencegrants/finalizers
+      - tcproutes/finalizers
+      - tlsroutes/finalizers
+      - udproutes/finalizers
+    verbs:
+      - update
+  - apiGroups:
+      - gateway.networking.k8s.io
+    resources:
+      - backendtlspolicies/status
+      - gatewayclasses/status
+      - gateways/status
+      - grpcroutes/status
+      - httproutes/status
+      - referencegrants/status
+      - tcproutes/status
+      - tlsroutes/status
+      - udproutes/status
+    verbs:
+      - patch
+      - update
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: caddy-system:caddy-gateway
+  labels:
+    app.kubernetes.io/name: caddy-gateway
+    app.kubernetes.io/component: operator
+    app.kubernetes.io/instance: caddy-system
+    app.kubernetes.io/part-of: caddy-system
+subjects:
+  - name: caddy-gateway
+    namespace: caddy-system
+    kind: ServiceAccount
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: caddy-system:caddy-gateway
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: caddy-gateway
+  namespace: caddy-system
+  labels:
+    app.kubernetes.io/name: caddy-gateway
+    app.kubernetes.io/component: operator
+    app.kubernetes.io/instance: caddy-system
+    app.kubernetes.io/part-of: caddy-system
+rules:
+  # This weird resource rule is used by kube-rbac-proxy to allow access to the Caddy Admin API.
+  - apiGroups:
+      - ""
+    resources:
+      - caddy/config
+    verbs:
+      - create
+  - apiGroups:
+      - ""
+    resources:
+      - events
+    verbs:
+      - create
+      - patch
+  - apiGroups:
+      - coordination.k8s.io
+    resources:
+      - leases
+    verbs:
+      - create
+  - apiGroups:
+      - coordination.k8s.io
+    resources:
+      - leases
+    resourceNames:
+      - 657d83d7.caddyserver.com
+    verbs:
+      - get
+      - patch
+      - update
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: caddy-gateway
+  namespace: caddy-system
+  labels:
+    app.kubernetes.io/name: caddy-gateway
+    app.kubernetes.io/component: operator
+    app.kubernetes.io/instance: caddy-system
+    app.kubernetes.io/part-of: caddy-system
+subjects:
+  - name: caddy-gateway
+    namespace: caddy-system
+    kind: ServiceAccount
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: caddy-gateway
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: caddy-gateway
+  namespace: caddy-system
+  labels:
+    app.kubernetes.io/name: caddy-gateway
+    app.kubernetes.io/component: operator
+    app.kubernetes.io/instance: caddy-system
+    app.kubernetes.io/part-of: caddy-system
+spec:
+  type: ClusterIP
+  ipFamilyPolicy: PreferDualStack
+  selector:
+    app.kubernetes.io/name: caddy-gateway
+    app.kubernetes.io/component: operator
+    app.kubernetes.io/instance: caddy-system
+    app.kubernetes.io/part-of: caddy-system
+  ports:
+    - name: metrics
+      port: 8080
+      targetPort: 8080
+      protocol: TCP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: caddy-gateway
+  namespace: caddy-system
+  labels:
+    app.kubernetes.io/name: caddy-gateway
+    app.kubernetes.io/component: operator
+    app.kubernetes.io/instance: caddy-system
+    app.kubernetes.io/part-of: caddy-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: caddy-gateway
+      app.kubernetes.io/component: operator
+      app.kubernetes.io/instance: caddy-system
+      app.kubernetes.io/part-of: caddy-system
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: caddy-gateway
+        app.kubernetes.io/component: operator
+        app.kubernetes.io/instance: caddy-system
+        app.kubernetes.io/part-of: caddy-system
+    spec:
+      containers:
+        - name: caddy-gateway
+          image: ghcr.io/caddyserver/gateway:latest
+          args:
+            - --leader-elect
+          ports:
+            - name: metrics
+              containerPort: 8080
+              protocol: TCP
+            - name: health
+              containerPort: 8081
+              protocol: TCP
+          env:
+            - name: GOMEMLIMIT
+              valueFrom:
+                resourceFieldRef:
+                  containerName: caddy-gateway
+                  resource: limits.memory
+          imagePullPolicy: Always
+          resources:
+            limits:
+              cpu: "0.5"
+              memory: 2Gi
+            requests:
+              cpu: "0.25"
+              memory: 1Gi
+          volumeMounts:
+            - name: tls
+              readOnly: true
+              mountPath: /var/run/secrets/tls
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: health
+              scheme: HTTP
+            initialDelaySeconds: 5
+            timeoutSeconds: 5
+            periodSeconds: 5
+            successThreshold: 1
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: health
+              scheme: HTTP
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          securityContext:
+            capabilities:
+              drop:
+                - ALL
+            privileged: false
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+      volumes:
+        - name: tls
+          csi:
+            driver: csi.cert-manager.io
+            readOnly: true
+            volumeAttributes:
+              csi.cert-manager.io/fs-group: "100"
+              csi.cert-manager.io/issuer-kind: Issuer
+              csi.cert-manager.io/issuer-name: caddy
+              csi.cert-manager.io/duration: 72h
+              csi.cert-manager.io/common-name: system:serviceaccount:caddy-system:caddy-gateway
+              csi.cert-manager.io/dns-names: caddy-gateway.${POD_NAMESPACE}.svc
+              csi.cert-manager.io/key-usages: client auth
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: kubernetes.io/arch
+                    operator: In
+                    values:
+                      - amd64
+                      - arm64
+                  - key: kubernetes.io/os
+                    operator: In
+                    values:
+                      - linux
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: DoNotSchedule
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: caddy-gateway
+              app.kubernetes.io/component: operator
+              app.kubernetes.io/instance: caddy-system
+              app.kubernetes.io/part-of: caddy-system
+          matchLabelKeys:
+            - pod-template-hash
+      tolerations:
+        - key: node-role.kubernetes.io/control-plane
+          effect: NoSchedule
+        - key: CriticalAddonsOnly
+          operator: Exists
+      serviceAccountName: caddy-gateway
+      automountServiceAccountToken: true
+      enableServiceLinks: false
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 100
+        runAsNonRoot: true
+        fsGroup: 100
+        seccompProfile:
+          type: RuntimeDefault
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: caddy
+  labels:
+    app.kubernetes.io/name: caddy-gateway
+    app.kubernetes.io/component: operator
+    app.kubernetes.io/instance: caddy-system
+    app.kubernetes.io/part-of: caddy-system
+spec:
+  controllerName: caddyserver.com/gateway-controller

@@ -64,11 +64,7 @@ kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/downloa
 kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.0.0/standard-install.yaml
 ```
 
-### Installing the Controller
-
-> TODO: deployment manifests
-
-### Installing Caddy
+### Installing the Controller and Caddy
 
 The Controller requires you to provide your own Caddy instance, later we may provide a CRD that
 will allow us to automatically deploy and manage Caddy for you, but for now you can use our pre-made
@@ -83,7 +79,9 @@ Before deploying Caddy however, there are a few things you need to consider.
    likely be exposed to the public internet and exposing the Caddy Admin API is extremely dangerous for
    security.
 
-> TODO: reference deployment templates
+The following example will get you up and running with the Controller and Caddy in a secure way.
+
+See the [example](./example).
 
 ## License
 

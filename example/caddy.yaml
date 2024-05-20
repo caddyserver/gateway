@@ -1,0 +1,316 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: caddy
+  namespace: caddy-system
+  labels:
+    app.kubernetes.io/name: caddy
+    app.kubernetes.io/component: caddy
+    app.kubernetes.io/instance: caddy
+    app.kubernetes.io/part-of: caddy
+automountServiceAccountToken: false
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: caddy-system:caddy
+  labels:
+    app.kubernetes.io/name: caddy-gateway
+    app.kubernetes.io/component: operator
+    app.kubernetes.io/instance: caddy-system
+    app.kubernetes.io/part-of: caddy-system
+rules:
+  - apiGroups:
+      - authorization.k8s.io
+    resources:
+      - subjectaccessreviews
+    verbs:
+      - create
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: caddy-system:caddy
+  labels:
+    app.kubernetes.io/name: caddy-gateway
+    app.kubernetes.io/component: operator
+    app.kubernetes.io/instance: caddy-system
+    app.kubernetes.io/part-of: caddy-system
+subjects:
+  - name: caddy
+    namespace: caddy-system
+    kind: ServiceAccount
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: caddy-system:caddy
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: caddy-kube-rbac-proxy
+  namespace: caddy-system
+  labels:
+    app.kubernetes.io/name: caddy-gateway
+    app.kubernetes.io/component: operator
+    app.kubernetes.io/instance: caddy-system
+    app.kubernetes.io/part-of: caddy-system
+data:
+  config.yaml: |
+    authorization:
+      resourceAttributes:
+        namespace: caddy-system
+        apiVersion: v1
+        resource: caddy
+        subresource: config
+        name: caddy
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: caddy
+  namespace: caddy-system
+  labels:
+    gateway.caddyserver.com/owning-gateway: caddy
+    app.kubernetes.io/name: caddy
+    app.kubernetes.io/component: caddy
+    app.kubernetes.io/instance: caddy
+    app.kubernetes.io/part-of: caddy
+spec:
+  type: LoadBalancer
+  ipFamilyPolicy: PreferDualStack
+  selector:
+    app.kubernetes.io/name: caddy
+    app.kubernetes.io/component: caddy
+    app.kubernetes.io/instance: caddy
+    app.kubernetes.io/part-of: caddy
+  ports:
+    - name: admin
+      port: 2021
+      targetPort: 2021
+      protocol: TCP
+      appProtocol: http2
+    - name: http
+      port: 80
+      targetPort: 80
+      protocol: TCP
+      appProtocol: http
+    - name: http2
+      port: 443
+      targetPort: 443
+      protocol: TCP
+      appProtocol: http2
+    - name: http3
+      port: 443
+      targetPort: 443
+      protocol: UDP
+      appProtocol: http3
+    - name: admin2
+      port: 2019
+      targetPort: 2019
+      protocol: TCP
+      appProtocol: http
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: caddy
+  namespace: caddy-system
+  labels:
+    app.kubernetes.io/name: caddy
+    app.kubernetes.io/component: caddy
+    app.kubernetes.io/instance: caddy
+    app.kubernetes.io/part-of: caddy
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: caddy
+      app.kubernetes.io/component: caddy
+      app.kubernetes.io/instance: caddy
+      app.kubernetes.io/part-of: caddy
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: caddy
+        app.kubernetes.io/component: caddy
+        app.kubernetes.io/instance: caddy
+        app.kubernetes.io/part-of: caddy
+      annotations:
+        kubectl.kubernetes.io/default-container: caddy
+    spec:
+      containers:
+        - name: kube-rbac-proxy
+          image: quay.io/brancz/kube-rbac-proxy:v0.15.0@sha256:2c7b120590cbe9f634f5099f2cbb91d0b668569023a81505ca124a5c437e7663
+          args:
+            - --secure-listen-address=:2021
+            - --upstream=http://[::1]:2019/
+            - --tls-cipher-suites=TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305
+            - --client-ca-file=/var/run/secrets/tls/ca.crt
+            - --tls-cert-file=/var/run/secrets/tls/tls.crt
+            - --tls-private-key-file=/var/run/secrets/tls/tls.key
+            - --tls-reload-interval=12h
+            - --config-file=/etc/kube-rbac-proxy/config.yaml
+          ports:
+            - name: admin
+              containerPort: 2021
+              protocol: TCP
+          env:
+            - name: GOMEMLIMIT
+              valueFrom:
+                resourceFieldRef:
+                  containerName: kube-rbac-proxy
+                  resource: limits.memory
+          resources:
+            limits:
+              cpu: "0.2"
+              memory: 128Mi
+            requests:
+              cpu: "0.1"
+              memory: 64Mi
+          volumeMounts:
+            - name: kube-rbac-proxy
+              readOnly: true
+              mountPath: /etc/kube-rbac-proxy
+            - name: tls
+              readOnly: true
+              mountPath: /var/run/secrets/tls
+            - name: kube-api-access
+              readOnly: true
+              mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+          securityContext:
+            capabilities:
+              drop:
+                - ALL
+            privileged: false
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+        - name: caddy
+          image: docker.io/library/caddy:2.8.0-beta.2@sha256:40f3fb52a1538e3e8a1a0e10218b6415f5b2fe017185243493b256bc64d59fbd
+          args:
+            - run
+          ports:
+            - name: http
+              containerPort: 80
+              protocol: TCP
+            - name: http2
+              containerPort: 443
+              protocol: TCP
+            - name: http3
+              containerPort: 443
+              protocol: UDP
+            - name: admin2
+              containerPort: 2019
+              protocol: TCP
+          env:
+            - name: CADDY_ADMIN
+              value: :2019
+            - name: GOMEMLIMIT
+              valueFrom:
+                resourceFieldRef:
+                  containerName: caddy
+                  resource: limits.memory
+          resources:
+            limits:
+              cpu: "4"
+              memory: 4Gi
+            requests:
+              cpu: "0.25"
+              memory: 1Gi
+          volumeMounts:
+            - name: config
+              readOnly: false
+              mountPath: /config
+            - name: data
+              readOnly: false
+              mountPath: /data
+            - name: tmp
+              readOnly: false
+              mountPath: /tmp
+          livenessProbe:
+            httpGet:
+              path: /metrics
+              port: admin2
+          readinessProbe:
+            httpGet:
+              path: /metrics
+              port: admin2
+            initialDelaySeconds: 2
+            timeoutSeconds: 1
+          startupProbe:
+            httpGet:
+              path: /metrics
+              port: admin2
+            failureThreshold: 10
+            successThreshold: 1
+            initialDelaySeconds: 3
+            periodSeconds: 10
+            timeoutSeconds: 3
+          securityContext:
+            capabilities:
+              drop:
+                - ALL
+            privileged: false
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+      volumes:
+        - name: config
+          emptyDir: {}
+        - name: data
+          emptyDir: {}
+        - name: tmp
+          emptyDir: {}
+        - name: tls
+          csi:
+            driver: csi.cert-manager.io
+            readOnly: true
+            volumeAttributes:
+              csi.cert-manager.io/fs-group: "100"
+              csi.cert-manager.io/issuer-kind: Issuer
+              csi.cert-manager.io/issuer-name: caddy
+              csi.cert-manager.io/duration: 72h
+              csi.cert-manager.io/dns-names: ${POD_NAME},${POD_NAME}.${POD_NAMESPACE},caddy.${POD_NAMESPACE}.svc
+              csi.cert-manager.io/key-usages: server auth
+        - name: kube-rbac-proxy
+          configMap:
+            name: caddy-kube-rbac-proxy
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: kubernetes.io/arch
+                    operator: In
+                    values:
+                      - amd64
+                      - arm64
+                  - key: kubernetes.io/os
+                    operator: In
+                    values:
+                      - linux
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: DoNotSchedule
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: caddy
+              app.kubernetes.io/component: caddy
+              app.kubernetes.io/instance: caddy
+              app.kubernetes.io/part-of: caddy
+          matchLabelKeys:
+            - pod-template-hash
+      serviceAccountName: caddy
+      automountServiceAccountToken: true
+      enableServiceLinks: false
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 100
+        runAsNonRoot: true
+        fsGroup: 100
+        sysctls:
+          - name: net.ipv4.ip_unprivileged_port_start
+            value: "0"
+        seccompProfile:
+          type: RuntimeDefault
