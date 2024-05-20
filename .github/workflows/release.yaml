@@ -45,3 +45,5 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           COSIGN_EXPERIMENTAL: 1
+        with:
+          args: release --clean
