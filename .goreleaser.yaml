@@ -69,12 +69,12 @@ signs:
 
 docker_signs:
   - cmd: cosign
-    artifacts: manifests # TODO: all?
+    artifacts: all
     output: true
     args:
       - sign
       - --yes
-      - "${artifact}@${digest}"
+      - "${artifact}"
 
 release:
   draft: true
