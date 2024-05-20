@@ -6,8 +6,8 @@ on:
       - "v*"
 
 jobs:
-  release:
-    name: Release
+  goreleaser:
+    name: Goreleaser
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -44,9 +44,37 @@ jobs:
         run: git fetch --tags --force
 
       - name: Run Goreleaser
+        id: run-goreleaser
         uses: goreleaser/goreleaser-action@5742e2a039330cbb23ebf35f046f814d4c6ff811 # v5.1.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           COSIGN_EXPERIMENTAL: 1
         with:
           args: release --clean
+
+      - name: Generate SLSA metadata
+        id: slsa
+        env:
+          ARTIFACTS: "${{ steps.run-goreleaser.outputs.artifacts }}"
+        run: |
+          set -euo pipefail
+
+          checksum_file=$(echo "$ARTIFACTS" | jq -r '.[] | select (.type == "Checksum") | .path')
+          echo "hashes=$(cat $checksum_file | base64 -w0)" >> "$GITHUB_OUTPUT"
+    outputs:
+      hashes: ${{ steps.slsa.outputs.hashes }}
+      # tag_name: ${{ steps.tag.outputs.tag_name }}
+
+  provenance:
+    name: Provenance
+    needs:
+      - goreleaser
+    permissions:
+      actions: read
+      id-token: write
+      contents: write
+    # Must be refernced by a tag. https://github.com/slsa-framework/slsa-github-generator/blob/main/internal/builders/generic/README.md#referencing-the-slsa-generator
+    uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@v2.0.0
+    with:
+      base64-subjects: "${{ needs.goreleaser.outputs.hashes }}"
+      upload-assets: true

@@ -13,7 +13,7 @@ report_sizes: true
 
 builds:
   - id: gateway
-    binary: caddy-gateway
+    binary: gateway
     env:
       - CGO_ENABLED=0
     goos:
