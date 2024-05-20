@@ -11,14 +11,14 @@ on:
 jobs:
   tests:
     name: Test
-    permissions:
-      contents: read
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-22.04]
         go: ["1.21.10", "1.22.3"]
+    permissions:
+      contents: read
 
     steps:
       - name: Setup Go
