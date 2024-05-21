@@ -7,7 +7,23 @@ utilizing [Caddy](https://caddyserver.com/) as the underlying web server.
 
 By (ab)using the [Caddy Admin API](https://caddyserver.com/docs/api) we can dynamically program
 Caddy with any configuration we want on the fly, without downtime. Instead of requiring sidecar
-containers or modifying Caddy source-code.
+containers or custom Caddy modules.
+
+### Differences from Ingress
+
+For those unaware the Gateway API is a Kubernetes SIG project being built to improve upon current
+standards like the built-in [Ingress](https://kubernetes.io/docs/concepts/services-networking/ingress/)
+resource. See <https://gateway-api.sigs.k8s.io/#whats-the-difference-between-gateway-api-and-an-api-gateway>
+for more details.
+
+There is an Kubernetes Ingress controller implementation that also utilizes Caddy as the underlying
+webserver that can be found at <https://github.com/caddyserver/ingress>. This project differs in
+a few ways.
+
+1. This project only implements support for the Gateway API resources and not the Ingress resource.
+2. This project is solely a Kubernetes controller, it uses Caddy's Admin REST API instead of being
+   wrapping or being directly integrated with Caddy, meaning you can bring your own Caddy deployments
+   and manage multiple separate Caddy deployments with a single controller deployment.
 
 ## Architecture
 
@@ -91,7 +107,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-http://www.apache.org/licenses/LICENSE-2.0
+<http://www.apache.org/licenses/LICENSE-2.0>
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -107,8 +123,8 @@ Parts of this controller would not be possible without the surrounding Kubernete
 open-source projects.
 
 I'd like to thank the [Cilium](https://github.com/cilium/cilium/) maintainers and community
-contributors for the base logic for the controller implementation, allowing me to focus on Caddy
-integration rather than Gateway API semantics.
+contributors for building the base logic for the controller implementation, allowing me to focus
+on Caddy integration rather than Gateway API semantics.
 
 ## Known Issues
 
