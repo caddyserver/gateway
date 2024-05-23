@@ -187,7 +187,7 @@ spec:
             readOnlyRootFilesystem: true
             allowPrivilegeEscalation: false
         - name: caddy
-          image: docker.io/library/caddy:2.8.0-beta.2@sha256:40f3fb52a1538e3e8a1a0e10218b6415f5b2fe017185243493b256bc64d59fbd
+          image: docker.io/library/caddy:2.8.0-rc.1@sha256:09b415c1f8fa012f849386e343a9e7d1dad579e50ee8c71456798469e91d0e37
           args:
             - run
           ports:
