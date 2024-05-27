@@ -16,7 +16,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gatewayv1alpha3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
 
 	gateway "github.com/caddyserver/gateway/internal"
 	caddy "github.com/caddyserver/gateway/internal/caddyv2"
@@ -301,7 +301,7 @@ func (i *Input) getHTTPServer(s *caddyhttp.Server, l gatewayv1.Listener) (*caddy
 				ruleHandlers = append(ruleHandlers, handler)
 			}
 
-			if rule.BackendRefs != nil && len(rule.BackendRefs) > 0 {
+			if len(rule.BackendRefs) > 0 {
 				for _, bf := range rule.BackendRefs {
 					bor := bf.BackendObjectReference
 					if !gateway.IsService(bor) {
@@ -336,19 +336,20 @@ func (i *Input) getHTTPServer(s *caddyhttp.Server, l gatewayv1.Listener) (*caddy
 						continue
 					}
 
-					var bTLSPolicy gatewayv1alpha2.BackendTLSPolicy
+					var bTLSPolicy gatewayv1alpha3.BackendTLSPolicy
 					for _, btp := range i.BackendTLSPolicies {
-						if !gateway.IsPolicyTargetService(btp.Spec.TargetRef.PolicyTargetReference) {
-							continue
+						match := false
+						for _, tf := range btp.Spec.TargetRefs {
+							if !gateway.IsLocalPolicyTargetService(tf.LocalPolicyTargetReference) {
+								continue
+							}
+							if string(tf.Name) != service.Name {
+								continue
+							}
+							match = true
+							break
 						}
-
-						// We are ignoring the namespace target reference and
-						// only supporting TLS policies in the namespace of the
-						// service itself.
-						if btp.Namespace != service.Namespace {
-							continue
-						}
-						if string(btp.Spec.TargetRef.Name) != service.Name {
+						if !match {
 							continue
 						}
 
@@ -363,15 +364,15 @@ func (i *Input) getHTTPServer(s *caddyhttp.Server, l gatewayv1.Listener) (*caddy
 					// if a BackendTLSPolicy with System trust is used.
 					if bTLSPolicy.Name != "" {
 						tls := &reverseproxy.TLSConfig{}
-						policy := bTLSPolicy.Spec.TLS
+						policy := bTLSPolicy.Spec.Validation
 						if hostname := string(policy.Hostname); hostname != "" {
 							tls.ServerName = hostname
 						}
 						// Check for any custom CAs to load.
-						if policy.CACertRefs != nil && len(policy.CACertRefs) > 0 {
+						if len(policy.CACertificateRefs) > 0 {
 							// Array of base64-encoded DER-encoded CA certificates.
 							var certs []string
-							for _, ref := range policy.CACertRefs {
+							for _, ref := range policy.CACertificateRefs {
 								pemCerts, err := i.getCAPool(context.Background(), ref)
 								if err != nil {
 									// TODO: log error and continue?
