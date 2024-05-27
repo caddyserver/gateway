@@ -45,6 +45,11 @@ func IsService(be gatewayv1.BackendObjectReference) bool {
 	return (be.Group == nil || *be.Group == corev1.GroupName) && (be.Kind == nil || *be.Kind == "Service")
 }
 
+// // IsPolicyTargetService checks if the given PolicyTargetReference references a Service resource.
+// func IsPolicyTargetService(be gatewayv1alpha2.PolicyTargetReference) bool {
+// 	return be.Group == corev1.GroupName && be.Kind == "Service"
+// }
+
 // IsPolicyTargetService checks if the given PolicyTargetReference references a Service resource.
 func IsLocalPolicyTargetService(be gatewayv1alpha2.LocalPolicyTargetReference) bool {
 	return be.Group == corev1.GroupName && be.Kind == "Service"

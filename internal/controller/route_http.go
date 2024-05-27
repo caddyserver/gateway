@@ -79,14 +79,17 @@ func (r *HTTPRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 	// TODO: document
 	if err := mgr.GetFieldIndexer().IndexField(ctx, &gatewayv1.HTTPRoute{}, gatewayIndex, func(o client.Object) []string {
-		hr := o.(*gatewayv1.HTTPRoute)
+		route, ok := o.(*gatewayv1.HTTPRoute)
+		if !ok {
+			return nil
+		}
 		var gateways []string
-		for _, parent := range hr.Spec.ParentRefs {
+		for _, parent := range route.Spec.ParentRefs {
 			if !gateway.IsGateway(parent) {
 				continue
 			}
 			gateways = append(gateways, types.NamespacedName{
-				Namespace: gateway.NamespaceDerefOr(parent.Namespace, hr.Namespace),
+				Namespace: gateway.NamespaceDerefOr(parent.Namespace, route.Namespace),
 				Name:      string(parent.Name),
 			}.String())
 		}

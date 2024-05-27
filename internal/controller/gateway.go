@@ -306,15 +306,13 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		return ctrl.Result{}, err
 	}
 	if len(caddyEps.Subsets) < 1 {
-		return ctrl.Result{}, errors.New("")
+		return ctrl.Result{}, errors.New("no endpoint subsets found for gateway service")
 	}
 
 	// Configure Caddy in parallel, so when someone runs Caddy as a DaemonSet on
 	// a 5,000 node cluster, we bring the gateway controller to its knees.
 	var wg sync.WaitGroup
 	for _, a := range caddyEps.Subsets[0].Addresses {
-		// TODO: is this necessary?
-		a := a
 		if a.TargetRef == nil {
 			// TODO: log error
 			continue
@@ -335,7 +333,7 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 			httpClient := &http.Client{Transport: tr}
 
 			log.V(1).Info("Programming Caddy instance", "ip", a.IP, "target", target)
-			// TODO: configurable scheme  and port
+			// TODO: configurable scheme and port
 			url := "https://" + net.JoinHostPort(a.IP, "2021") + "/load"
 			req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewBuffer(b))
 			if err != nil {
@@ -348,13 +346,15 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 				log.Error(err, "Error programming Caddy instance", "ip", a.IP, "target", target)
 				return
 			}
-			defer res.Body.Close()
+			defer func() {
+				_, _ = io.Copy(io.Discard, res.Body)
+				res.Body.Close()
+			}()
 			if res.StatusCode != http.StatusOK {
-				b, _ := io.ReadAll(res.Body)
+				b, _ := io.ReadAll(io.LimitReader(res.Body, 4*1024))
 				log.Error(errors.New(string(b)), "Error programming Caddy instance", "status_code", res.StatusCode, "ip", a.IP, "target", target)
 				return
 			}
-			_, _ = io.Copy(io.Discard, res.Body)
 			log.V(1).Info("Successfully programmed Caddy instance", "ip", a.IP, "target", target)
 		}(a)
 	}

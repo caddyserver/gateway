@@ -49,12 +49,13 @@ Support for missing resources is planned but not yet implemented.
 - [x] [GatewayClass](https://gateway-api.sigs.k8s.io/api-types/gatewayclass/)
 - [x] [Gateway](https://gateway-api.sigs.k8s.io/api-types/gateway/)
 - [x] [ReferenceGrant](https://gateway-api.sigs.k8s.io/api-types/referencegrant/)
+- [ ] [BackendLBPolicy](https://gateway-api.sigs.k8s.io/geps/gep-1619/)
 - [x] [BackendTLSPolicy](https://gateway-api.sigs.k8s.io/api-types/backendtlspolicy/)
 - [x] [HTTPRoute](https://gateway-api.sigs.k8s.io/api-types/httproute/)
 - [ ] [GRPCRoute](https://gateway-api.sigs.k8s.io/api-types/grpcroute/)
 - [ ] [TLSRoute](https://gateway-api.sigs.k8s.io/concepts/api-overview/#tlsroute)
-- [ ] [TCPRoute](https://gateway-api.sigs.k8s.io/concepts/api-overview/#tcproute-and-udproute)
-- [ ] [UDPRoute](https://gateway-api.sigs.k8s.io/concepts/api-overview/#tcproute-and-udproute)
+- [x] [TCPRoute](https://gateway-api.sigs.k8s.io/concepts/api-overview/#tcproute-and-udproute)
+- [x] [UDPRoute](https://gateway-api.sigs.k8s.io/concepts/api-overview/#tcproute-and-udproute)
 
 The [Ingress](https://kubernetes.io/docs/concepts/services-networking/ingress/) resource is not
 supported and support is not planned, sorry.
