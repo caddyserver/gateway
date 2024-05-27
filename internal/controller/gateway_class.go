@@ -7,6 +7,7 @@ import (
 	"context"
 	"slices"
 
+	apiextv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -23,6 +24,10 @@ import (
 	gateway "github.com/caddyserver/gateway/internal"
 )
 
+// Add RBAC permissions to get CRDs, so we can verify that the gateway-api CRDs
+// are not just installed but also a supported version.
+// +kubebuilder:rbac:groups=apiextensions.k8s.io,resources=customresourcedefinitions,verbs=get,list,watch
+
 // +kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=gatewayclasses,verbs=get;list;watch
 // +kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=gatewayclasses/status,verbs=patch;update
 // +kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=gatewayclasses/finalizers,verbs=update
@@ -38,6 +43,19 @@ var _ reconcile.Reconciler = (*GatewayClassReconciler)(nil)
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *GatewayClassReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	ctx := context.Background()
+
+	// Index all CRDs by their group so we can easily filter them.
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &apiextv1.CustomResourceDefinition{}, "spec.group", func(o client.Object) []string {
+		hr, ok := o.(*apiextv1.CustomResourceDefinition)
+		if !ok {
+			return nil
+		}
+		return []string{hr.Spec.Group}
+	}); err != nil {
+		return err
+	}
+
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&gatewayv1.GatewayClass{}, builder.WithPredicates(predicate.NewPredicateFuncs(objectMatchesControllerName()))).
 		Complete(r)
@@ -108,7 +126,20 @@ func (r *GatewayClassReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		Message: "",
 	})
 
+	// List CRDs so we can validate
+	crds := &apiextv1.CustomResourceDefinitionList{}
+	if err := r.Client.List(ctx, crds, client.MatchingFields{"spec.group": "gateway.networking.k8s.io"}); err != nil {
+		return ctrl.Result{}, err
+	}
+
 	// TODO: validate CRD versions.
+	for _, crd := range crds.Items {
+		log.Info("Found Gateway API CRD",
+			"Name", crd.Name,
+			"BundleVersion", crd.ObjectMeta.Annotations["gateway.networking.k8s.io/bundle-version"],
+			"Channel", crd.ObjectMeta.Annotations["gateway.networking.k8s.io/channel"])
+	}
+
 	meta.SetStatusCondition(&gwc.Status.Conditions, metav1.Condition{
 		Type:   string(gatewayv1.GatewayClassConditionStatusSupportedVersion),
 		Status: metav1.ConditionTrue,

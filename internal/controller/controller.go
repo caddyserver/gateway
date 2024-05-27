@@ -21,10 +21,6 @@ import (
 	gateway "github.com/caddyserver/gateway/internal"
 )
 
-// Add RBAC permissions to get CRDs, so we can verify that the gateway-api CRDs
-// are not just installed but also a supported version.
-// +kubebuilder:rbac:groups=apiextensions.k8s.io,resources=customresourcedefinitions,verbs=get
-
 // Add RBAC permissions to get ConfigMaps, we use it for BackendTLSPolicies.
 // +kubebuilder:rbac:groups=core,resources=configmaps,verbs=get;list;watch
 
