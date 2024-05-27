@@ -1,0 +1,117 @@
+name: Conformance
+
+on:
+  push:
+    branches:
+      - conformance-testing
+
+env:
+  kind_config: .github/kind-config.yaml
+  gateway_api_version: v1.1.0
+  timeout: 5m
+
+jobs:
+  gateway-api:
+    name: Gateway API
+    runs-on: ubuntu-22.04
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        # - crd-channel: experimental
+        #   conformance-profile: false
+        # - crd-channel: standard
+        #   conformance-profile: false
+        - crd-channel: experimental
+          conformance-profile: true
+    permissions:
+      contents: read
+    steps:
+      - name: Code checkout
+        uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4.1.6
+
+      - name: Create kind cluster
+        uses: helm/kind-action@0025e74a8c7512023d06dc019c617aa3cf561fde # v1.10.0
+        with:
+          version: "v0.23.0"
+          config: ${{ env.kind_config }}
+          # wait: 0
+
+      - name: Install Gateway API CRDs
+        run: |
+          # Install Gateway CRDs
+          kubectl apply -f https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/${{ env.gateway_api_version }}/config/crd/${{ matrix.crd-channel }}/gateway.networking.k8s.io_gatewayclasses.yaml
+          kubectl apply -f https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/${{ env.gateway_api_version }}/config/crd/${{ matrix.crd-channel }}/gateway.networking.k8s.io_gateways.yaml
+          kubectl apply -f https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/${{ env.gateway_api_version }}/config/crd/${{ matrix.crd-channel }}/gateway.networking.k8s.io_grpcroutes.yaml
+          kubectl apply -f https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/${{ env.gateway_api_version }}/config/crd/${{ matrix.crd-channel }}/gateway.networking.k8s.io_httproutes.yaml
+          kubectl apply -f https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/${{ env.gateway_api_version }}/config/crd/${{ matrix.crd-channel }}/gateway.networking.k8s.io_referencegrants.yaml
+          # experimental-only resources
+          kubectl apply -f https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/${{ env.gateway_api_version }}/config/crd/experimental/gateway.networking.k8s.io_backendlbpolicies.yaml
+          kubectl apply -f https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/${{ env.gateway_api_version }}/config/crd/experimental/gateway.networking.k8s.io_backendtlspolicies.yaml
+          kubectl apply -f https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/${{ env.gateway_api_version }}/config/crd/experimental/gateway.networking.k8s.io_tcproutes.yaml
+          kubectl apply -f https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/${{ env.gateway_api_version }}/config/crd/experimental/gateway.networking.k8s.io_tlsroutes.yaml
+          kubectl apply -f https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/${{ env.gateway_api_version }}/config/crd/experimental/gateway.networking.k8s.io_udproutes.yaml
+
+          # To make sure that Gateway API CRs are available
+          kubectl wait --for condition=Established crd/gatewayclasses.gateway.networking.k8s.io --timeout=${{ env.timeout }}
+          kubectl wait --for condition=Established crd/gateways.gateway.networking.k8s.io --timeout=${{ env.timeout }}
+          kubectl wait --for condition=Established crd/httproutes.gateway.networking.k8s.io --timeout=${{ env.timeout }}
+          kubectl wait --for condition=Established crd/tlsroutes.gateway.networking.k8s.io --timeout=${{ env.timeout }}
+          kubectl wait --for condition=Established crd/grpcroutes.gateway.networking.k8s.io --timeout=${{ env.timeout }}
+          kubectl wait --for condition=Established crd/referencegrants.gateway.networking.k8s.io --timeout=${{ env.timeout }}
+
+      - name: Install Caddy Gateway
+        run: |
+          echo 'Definitely running installation...'
+
+      - name: Install Go
+        uses: actions/setup-go@cdcb36043654635271a94b9a6d1392de5bb323a7 # v5.0.1
+        with:
+          go-version: '1.22.3'
+
+      - name: Install tparse
+        timeout-minutes: 15
+        run: |
+          go install github.com/mfridman/tparse@28967170dce4f9f13de77ec857f7aed4c4294a5f # v0.12.3 (main) with -progress
+
+      - name: Run conformance test
+        timeout-minutes: 30
+        run: |
+          if [ ${{ matrix.conformance-profile }} == "true" ]; then
+            GATEWAY_API_CONFORMANCE_TESTS=1 go test \
+              -p 4 \
+              -v ./internal/controller \
+              --gateway-class 'caddyserver.com/gateway-controller' \
+              --all-features \
+              --conformance-profiles GATEWAY-HTTP,GATEWAY-TLS \
+              --organization caddyserver \
+              --project gateway \
+              --url 'github.com/caddyserver/gateway' \
+              --version main \
+              --contact TODO \
+              --report-output report.yaml \
+              -test.run "TestConformance" \
+              -test.skip "${{ steps.vars.outputs.skipped_tests }}" \
+              -json \
+            | tparse -progress
+          else
+            GATEWAY_API_CONFORMANCE_TESTS=1 go test \
+              -p 4 \
+              -v ./internal/controller \
+              --gateway-class 'caddyserver.com/gateway-controller' \
+              --all-features \
+              --allow-crds-mismatch \
+              -test.run "TestConformance" \
+              -test.skip "${{ steps.vars.outputs.skipped_tests }}" \
+              -json \
+            | tparse -progress
+          fi
+
+      - name: Upload report artifacts
+        uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 # v4.3.3
+        with:
+          name: report-${{ matrix.conformance-profile }}-${{ matrix.crd-channel }}.yaml
+          path: operator/pkg/gateway-api/report.yaml
+          retention-days: 5
+          if-no-files-found: ignore
