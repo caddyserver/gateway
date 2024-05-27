@@ -46,17 +46,17 @@ func IsService(be gatewayv1.BackendObjectReference) bool {
 }
 
 // IsPolicyTargetService checks if the given PolicyTargetReference references a Service resource.
-func IsPolicyTargetService(be gatewayv1alpha2.PolicyTargetReference) bool {
+func IsLocalPolicyTargetService(be gatewayv1alpha2.LocalPolicyTargetReference) bool {
 	return be.Group == corev1.GroupName && be.Kind == "Service"
 }
 
 // IsLocalConfigMap checks if the given LocalObjectReference references a ConfigMap resource.
-func IsLocalConfigMap(be gatewayv1beta1.LocalObjectReference) bool {
+func IsLocalConfigMap(be gatewayv1.LocalObjectReference) bool {
 	return be.Group == corev1.GroupName && be.Kind == "ConfigMap"
 }
 
 // IsLocalSecret checks if the given LocalObjectReference references a Secret resource.
-func IsLocalSecret(be gatewayv1beta1.LocalObjectReference) bool {
+func IsLocalSecret(be gatewayv1.LocalObjectReference) bool {
 	return be.Group == corev1.GroupName && be.Kind == "Secret"
 }
 

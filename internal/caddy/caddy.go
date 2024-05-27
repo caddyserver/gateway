@@ -13,6 +13,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gatewayv1alpha3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	gateway "github.com/caddyserver/gateway/internal"
@@ -43,13 +44,13 @@ type Input struct {
 	GatewayClass *gatewayv1.GatewayClass
 
 	HTTPRoutes []gatewayv1.HTTPRoute
-	GRPCRoutes []gatewayv1alpha2.GRPCRoute
+	GRPCRoutes []gatewayv1.GRPCRoute
 	TCPRoutes  []gatewayv1alpha2.TCPRoute
 	TLSRoutes  []gatewayv1alpha2.TLSRoute
 	UDPRoutes  []gatewayv1alpha2.UDPRoute
 
 	Grants             []gatewayv1beta1.ReferenceGrant
-	BackendTLSPolicies []gatewayv1alpha2.BackendTLSPolicy
+	BackendTLSPolicies []gatewayv1alpha3.BackendTLSPolicy
 
 	Services []corev1.Service
 

@@ -128,7 +128,7 @@ func getGatewayKindForObject(obj metav1.Object) gatewayv1.Kind {
 	switch obj.(type) {
 	case *gatewayv1.HTTPRoute:
 		return "HTTPRoute"
-	case *gatewayv1alpha2.GRPCRoute:
+	case *gatewayv1.GRPCRoute:
 		return "GRPCRoute"
 	case *gatewayv1alpha2.TCPRoute:
 		return "TCPRoute"

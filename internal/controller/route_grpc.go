@@ -12,7 +12,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
 // +kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=grpcroutes,verbs=get;list;watch
@@ -30,7 +30,7 @@ var _ reconcile.Reconciler = (*GRPCRouteReconciler)(nil)
 // SetupWithManager sets up the controller with the Manager.
 func (r *GRPCRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&gatewayv1alpha2.GRPCRoute{}).
+		For(&gatewayv1.GRPCRoute{}).
 		Complete(r)
 }
 

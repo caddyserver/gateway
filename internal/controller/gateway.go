@@ -35,6 +35,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gatewayv1alpha3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	gateway "github.com/caddyserver/gateway/internal"
@@ -99,7 +100,7 @@ func (r *GatewayReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			ctrlPredicate,
 		).
 		Watches(
-			&gatewayv1alpha2.GRPCRoute{},
+			&gatewayv1.GRPCRoute{},
 			r.enqueueRequestForOwningGRPCRoute(),
 		).
 		Watches(
@@ -122,7 +123,7 @@ func (r *GatewayReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			r.enqueueRequestForOwningUDPRoute(),
 			builder.WithPredicates(onlyStatusChanged()),
 		).
-		Watches(&gatewayv1alpha2.BackendTLSPolicy{}, r.enqueueRequestForTLSPolicy()).
+		Watches(&gatewayv1alpha3.BackendTLSPolicy{}, r.enqueueRequestForTLSPolicy()).
 		Watches(
 			&corev1.Secret{},
 			r.enqueueRequestForTLSSecret(),
@@ -220,7 +221,7 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		return r.handleReconcileErrorWithStatus(ctx, err, original, gw)
 	}
 
-	grpcRouteList := &gatewayv1alpha2.GRPCRouteList{}
+	grpcRouteList := &gatewayv1.GRPCRouteList{}
 	if err := r.Client.List(ctx, grpcRouteList); err != nil {
 		log.Error(err, "Unable to list GRPCRoutes")
 		return r.handleReconcileErrorWithStatus(ctx, err, original, gw)
@@ -250,7 +251,7 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		return r.handleReconcileErrorWithStatus(ctx, err, original, gw)
 	}
 
-	backendTLSPolicyList := &gatewayv1alpha2.BackendTLSPolicyList{}
+	backendTLSPolicyList := &gatewayv1alpha3.BackendTLSPolicyList{}
 	if err := r.Client.List(ctx, backendTLSPolicyList); err != nil {
 		log.Error(err, "Unable to list BackendTLSPolicies")
 		return r.handleReconcileErrorWithStatus(ctx, err, original, gw)
@@ -526,7 +527,7 @@ func (r *GatewayReconciler) enqueueRequestForOwningHTTPRoute() handler.EventHand
 // belonging to the given Gateway
 func (r *GatewayReconciler) enqueueRequestForOwningGRPCRoute() handler.EventHandler {
 	return handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, o client.Object) []reconcile.Request {
-		route, ok := o.(*gatewayv1alpha2.GRPCRoute)
+		route, ok := o.(*gatewayv1.GRPCRoute)
 		if !ok {
 			return nil
 		}
@@ -620,7 +621,7 @@ func getReconcileRequestsForRoute(ctx context.Context, c client.Client, object m
 // TODO: document
 func (r *GatewayReconciler) enqueueRequestForTLSPolicy() handler.EventHandler {
 	return handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, o client.Object) []reconcile.Request {
-		_, ok := o.(*gatewayv1alpha2.BackendTLSPolicy)
+		_, ok := o.(*gatewayv1alpha3.BackendTLSPolicy)
 		if !ok {
 			return nil
 		}
@@ -722,8 +723,8 @@ func (r *GatewayReconciler) filterHTTPRoutesByGateway(ctx context.Context, gw *g
 
 // filterGRPCRoutesByGateway .
 // TODO
-func (r *GatewayReconciler) filterGRPCRoutesByGateway(ctx context.Context, gw *gatewayv1.Gateway, routes []gatewayv1alpha2.GRPCRoute) []gatewayv1alpha2.GRPCRoute {
-	var filtered []gatewayv1alpha2.GRPCRoute
+func (r *GatewayReconciler) filterGRPCRoutesByGateway(ctx context.Context, gw *gatewayv1.Gateway, routes []gatewayv1.GRPCRoute) []gatewayv1.GRPCRoute {
+	var filtered []gatewayv1.GRPCRoute
 	for _, route := range routes {
 		if isAttachable(ctx, gw, &route, route.Status.Parents) && isAllowed(ctx, r.Client, gw, &route) && len(computeHosts(gw, route.Spec.Hostnames)) > 0 {
 			filtered = append(filtered, route)

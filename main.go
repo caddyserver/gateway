@@ -13,6 +13,7 @@ import (
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gatewayv1alpha3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"k8s.io/apimachinery/pkg/runtime"
@@ -37,9 +38,10 @@ var (
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 
-	utilruntime.Must(gatewayv1.AddToScheme(scheme))
-	utilruntime.Must(gatewayv1alpha2.AddToScheme(scheme))
-	utilruntime.Must(gatewayv1beta1.AddToScheme(scheme))
+	utilruntime.Must(gatewayv1.Install(scheme))
+	utilruntime.Must(gatewayv1alpha2.Install(scheme))
+	utilruntime.Must(gatewayv1alpha3.Install(scheme))
+	utilruntime.Must(gatewayv1beta1.Install(scheme))
 	//+kubebuilder:scaffold:scheme
 }
 
