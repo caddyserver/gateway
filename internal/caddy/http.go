@@ -312,6 +312,7 @@ func (i *Input) getHTTPServer(s *caddyhttp.Server, l gatewayv1.Listener) (*caddy
 					if bor.Port == nil {
 						continue
 					}
+					port := int32(*bor.Port)
 
 					// Get the service.
 					//
@@ -336,6 +337,17 @@ func (i *Input) getHTTPServer(s *caddyhttp.Server, l gatewayv1.Listener) (*caddy
 						continue
 					}
 
+					// Find a matching port on the backend service.
+					// TODO: if no matching port is found do we abort?
+					var sp corev1.ServicePort
+					for _, p := range service.Spec.Ports {
+						if p.Port != port {
+							continue
+						}
+						sp = p
+						break
+					}
+
 					var bTLSPolicy gatewayv1alpha3.BackendTLSPolicy
 					for _, btp := range i.BackendTLSPolicies {
 						match := false
@@ -352,7 +364,6 @@ func (i *Input) getHTTPServer(s *caddyhttp.Server, l gatewayv1.Listener) (*caddy
 						if !match {
 							continue
 						}
-
 						bTLSPolicy = btp
 						break
 					}
@@ -400,6 +411,19 @@ func (i *Input) getHTTPServer(s *caddyhttp.Server, l gatewayv1.Listener) (*caddy
 						// Caddy will default to using system trust for TLS if
 						// we don't override the pool.
 						transport.TLS = tls
+					} else if sp.AppProtocol != nil {
+						// ref; https://gateway-api.sigs.k8s.io/guides/backend-protocol/
+						switch *sp.AppProtocol {
+						case "kubernetes.io/h2c":
+							// Enable support for h2c (HTTP/2 over Cleartext).
+							transport.Versions = []string{"h2c"}
+						case "kubernetes.io/ws":
+							// This is only here as it is formally recognized as a possible value by
+							// the Gateway API spec.
+							//
+							// Caddy automatically proxies WebSockets without any additional
+							// configuration, hence why this case is empty.
+						}
 					}
 
 					// TODO: load_balancing, weights, etc.
@@ -407,7 +431,7 @@ func (i *Input) getHTTPServer(s *caddyhttp.Server, l gatewayv1.Listener) (*caddy
 						Transport: transport,
 						Upstreams: reverseproxy.UpstreamPool{
 							{
-								Dial: net.JoinHostPort(service.Spec.ClusterIP, strconv.Itoa(int(*bor.Port))),
+								Dial: net.JoinHostPort(service.Spec.ClusterIP, strconv.Itoa(int(port))),
 							},
 						},
 					})
