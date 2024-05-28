@@ -53,7 +53,7 @@ Support for missing resources is planned but not yet implemented.
 - [x] [BackendTLSPolicy](https://gateway-api.sigs.k8s.io/api-types/backendtlspolicy/)
 - [x] [HTTPRoute](https://gateway-api.sigs.k8s.io/api-types/httproute/)
 - [ ] [GRPCRoute](https://gateway-api.sigs.k8s.io/api-types/grpcroute/)
-- [ ] [TLSRoute](https://gateway-api.sigs.k8s.io/concepts/api-overview/#tlsroute)
+- [x] [TLSRoute](https://gateway-api.sigs.k8s.io/concepts/api-overview/#tlsroute)
 - [x] [TCPRoute](https://gateway-api.sigs.k8s.io/concepts/api-overview/#tcproute-and-udproute)
 - [x] [UDPRoute](https://gateway-api.sigs.k8s.io/concepts/api-overview/#tcproute-and-udproute)
 

@@ -123,13 +123,13 @@ func (i *Input) handleListener(l gatewayv1.Listener) error {
 	case gatewayv1.HTTPProtocolType:
 		return i.handleHTTPListener(l)
 	case gatewayv1.HTTPSProtocolType:
+		// If TLS mode is not Terminate, then ignore the listener. We cannot do HTTP routing while
+		// doing TLS passthrough as we need to decrypt the request in order to route it.
+		if l.TLS != nil && l.TLS.Mode != nil && *l.TLS.Mode != gatewayv1.TLSModeTerminate {
+			return nil
+		}
 		return i.handleHTTPListener(l)
 	case gatewayv1.TLSProtocolType:
-		// If TLS mode is set to Terminate, treat it as an HTTP server.
-		if l.TLS == nil || l.TLS.Mode == nil || *l.TLS.Mode == gatewayv1.TLSModeTerminate {
-			return i.handleHTTPListener(l)
-		}
-		// Otherwise we need TLS passthrough, which is more complicated.
 		return i.handleLayer4Listener(l)
 	case gatewayv1.TCPProtocolType:
 		return i.handleLayer4Listener(l)
@@ -194,7 +194,7 @@ func (i *Input) handleLayer4Listener(l gatewayv1.Listener) error {
 	s, ok := i.layer4Servers[key]
 	if !ok {
 		s = &layer4.Server{
-			Listen: []string{proto + "/" + ":" + strconv.Itoa(int(l.Port))},
+			Listen: []string{proto + "/:" + strconv.Itoa(int(l.Port))},
 		}
 	}
 
@@ -204,9 +204,7 @@ func (i *Input) handleLayer4Listener(l gatewayv1.Listener) error {
 	)
 	switch l.Protocol {
 	case gatewayv1.TLSProtocolType:
-		// TODO: implement
-		// This TLS protocol is for passthrough, not terminate.
-		break
+		server, err = i.getTLSServer(s, l)
 	case gatewayv1.TCPProtocolType:
 		server, err = i.getTCPServer(s, l)
 	case gatewayv1.UDPProtocolType:

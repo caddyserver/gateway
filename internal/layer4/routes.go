@@ -14,13 +14,11 @@ type Route struct {
 	// All matchers within the same set must match, and at least one set
 	// must match; in other words, matchers are AND'ed together within a
 	// set, but multiple sets are OR'ed together. No matchers matches all.
-	MatcherSets []any `json:"match,omitempty"`
-	// MatcherSetsRaw []caddy.ModuleMap `json:"match,omitempty" caddy:"namespace=layer4.matchers"`
+	MatcherSets []Match `json:"match,omitempty"`
 
 	// Handlers define the behavior for handling the stream. They are
 	// executed in sequential order if the route's matchers match.
 	Handlers []Handler `json:"handle,omitempty"`
-	// HandlersRaw []json.RawMessage `json:"handle,omitempty" caddy:"namespace=layer4.handlers inline_key=handler"`
 }
 
 // RouteList is a list of connection routes that can create

@@ -167,15 +167,15 @@ func main() {
 		os.Exit(1)
 		return
 	}
-	//if err = (&controller.TLSRouteReconciler{
-	//	Client:   client,
-	//	Scheme:   scheme,
-	//	Recorder: recorder,
-	//}).SetupWithManager(mgr); err != nil {
-	//	setupLog.Error(err, "unable to create controller", "controller", "TLSRoute")
-	//	os.Exit(1)
-	//	return
-	//}
+	if err = (&controller.TLSRouteReconciler{
+		Client:   client,
+		Scheme:   scheme,
+		Recorder: recorder,
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "TLSRoute")
+		os.Exit(1)
+		return
+	}
 	if err = (&controller.UDPRouteReconciler{
 		Client:   client,
 		Scheme:   scheme,
