@@ -65,7 +65,7 @@ func (i *Input) getUDPServer(s *layer4.Server, l gatewayv1.Listener) (*layer4.Se
 			handlers = append(handlers, &l4proxy.Handler{
 				Upstreams: l4proxy.UpstreamPool{
 					&l4proxy.Upstream{
-						Dial: []string{net.JoinHostPort(service.Spec.ClusterIP, strconv.Itoa(int(*bor.Port)))},
+						Dial: []string{"udp/" + net.JoinHostPort(service.Spec.ClusterIP, strconv.Itoa(int(*bor.Port)))},
 					},
 				},
 			})
