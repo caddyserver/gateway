@@ -306,15 +306,13 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		return ctrl.Result{}, err
 	}
 	if len(caddyEps.Subsets) < 1 {
-		return ctrl.Result{}, errors.New("")
+		return ctrl.Result{}, errors.New("no endpoint subsets found for gateway service")
 	}
 
 	// Configure Caddy in parallel, so when someone runs Caddy as a DaemonSet on
 	// a 5,000 node cluster, we bring the gateway controller to its knees.
 	var wg sync.WaitGroup
 	for _, a := range caddyEps.Subsets[0].Addresses {
-		// TODO: is this necessary?
-		a := a
 		if a.TargetRef == nil {
 			// TODO: log error
 			continue
@@ -335,7 +333,7 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 			httpClient := &http.Client{Transport: tr}
 
 			log.V(1).Info("Programming Caddy instance", "ip", a.IP, "target", target)
-			// TODO: configurable scheme  and port
+			// TODO: configurable scheme and port
 			url := "https://" + net.JoinHostPort(a.IP, "2021") + "/load"
 			req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewBuffer(b))
 			if err != nil {
@@ -348,13 +346,15 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 				log.Error(err, "Error programming Caddy instance", "ip", a.IP, "target", target)
 				return
 			}
-			defer res.Body.Close()
+			defer func() {
+				_, _ = io.Copy(io.Discard, res.Body)
+				res.Body.Close()
+			}()
 			if res.StatusCode != http.StatusOK {
-				b, _ := io.ReadAll(res.Body)
+				b, _ := io.ReadAll(io.LimitReader(res.Body, 4*1024))
 				log.Error(errors.New(string(b)), "Error programming Caddy instance", "status_code", res.StatusCode, "ip", a.IP, "target", target)
 				return
 			}
-			_, _ = io.Copy(io.Discard, res.Body)
 			log.V(1).Info("Successfully programmed Caddy instance", "ip", a.IP, "target", target)
 		}(a)
 	}
@@ -685,37 +685,17 @@ func (r *GatewayReconciler) handleReconcileErrorWithStatus(ctx context.Context, 
 // filterHTTPRoutesByGateway .
 // TODO
 func (r *GatewayReconciler) filterHTTPRoutesByGateway(ctx context.Context, gw *gatewayv1.Gateway, routes []gatewayv1.HTTPRoute) []gatewayv1.HTTPRoute {
-	_log := log.FromContext(
-		ctx,
-		"gateway", types.NamespacedName{
-			Namespace: gw.Namespace,
-			Name:      gw.Name,
-		},
-	)
 	var filtered []gatewayv1.HTTPRoute
 	for _, route := range routes {
-		log2 := _log.WithValues("route", types.NamespacedName{
-			Namespace: route.Namespace,
-			Name:      route.Name,
-		})
-
-		ctx2 := log.IntoContext(ctx, log2)
-
-		if !isAttachable(ctx2, gw, &route, route.Status.Parents) {
-			log2.Info("route is not attachable")
+		if !isAttachable(ctx, gw, &route, route.Status.Parents) {
 			continue
 		}
-
-		if !isAllowed(ctx2, r.Client, gw, &route) {
-			log2.Info("route is not allowed")
+		if !isAllowed(ctx, r.Client, gw, &route) {
 			continue
 		}
-
-		//if len(computeHosts(gw, route.Spec.Hostnames)) > 1 {
-		//	log2.Info("couldn't compute hosts")
-		//	continue
-		//}
-
+		// if len(computeHosts(gw, route.Spec.Hostnames)) > 1 {
+		// 	continue
+		// }
 		filtered = append(filtered, route)
 	}
 	return filtered
@@ -726,9 +706,16 @@ func (r *GatewayReconciler) filterHTTPRoutesByGateway(ctx context.Context, gw *g
 func (r *GatewayReconciler) filterGRPCRoutesByGateway(ctx context.Context, gw *gatewayv1.Gateway, routes []gatewayv1.GRPCRoute) []gatewayv1.GRPCRoute {
 	var filtered []gatewayv1.GRPCRoute
 	for _, route := range routes {
-		if isAttachable(ctx, gw, &route, route.Status.Parents) && isAllowed(ctx, r.Client, gw, &route) && len(computeHosts(gw, route.Spec.Hostnames)) > 0 {
-			filtered = append(filtered, route)
+		if !isAttachable(ctx, gw, &route, route.Status.Parents) {
+			continue
 		}
+		if !isAllowed(ctx, r.Client, gw, &route) {
+			continue
+		}
+		// if len(computeHosts(gw, route.Spec.Hostnames)) > 1 {
+		// 	continue
+		// }
+		filtered = append(filtered, route)
 	}
 	return filtered
 }
@@ -738,9 +725,13 @@ func (r *GatewayReconciler) filterGRPCRoutesByGateway(ctx context.Context, gw *g
 func (r *GatewayReconciler) filterTCPRoutesByGateway(ctx context.Context, gw *gatewayv1.Gateway, routes []gatewayv1alpha2.TCPRoute) []gatewayv1alpha2.TCPRoute {
 	var filtered []gatewayv1alpha2.TCPRoute
 	for _, route := range routes {
-		if isAttachable(ctx, gw, &route, route.Status.Parents) && isAllowed(ctx, r.Client, gw, &route) {
-			filtered = append(filtered, route)
+		if !isAttachable(ctx, gw, &route, route.Status.Parents) {
+			continue
 		}
+		if !isAllowed(ctx, r.Client, gw, &route) {
+			continue
+		}
+		filtered = append(filtered, route)
 	}
 	return filtered
 }
@@ -750,9 +741,16 @@ func (r *GatewayReconciler) filterTCPRoutesByGateway(ctx context.Context, gw *ga
 func (r *GatewayReconciler) filterTLSRoutesByGateway(ctx context.Context, gw *gatewayv1.Gateway, routes []gatewayv1alpha2.TLSRoute) []gatewayv1alpha2.TLSRoute {
 	var filtered []gatewayv1alpha2.TLSRoute
 	for _, route := range routes {
-		if isAttachable(ctx, gw, &route, route.Status.Parents) && isAllowed(ctx, r.Client, gw, &route) && len(computeHosts(gw, route.Spec.Hostnames)) > 0 {
-			filtered = append(filtered, route)
+		if !isAttachable(ctx, gw, &route, route.Status.Parents) {
+			continue
 		}
+		if !isAllowed(ctx, r.Client, gw, &route) {
+			continue
+		}
+		// if len(computeHosts(gw, route.Spec.Hostnames)) > 1 {
+		// 	continue
+		// }
+		filtered = append(filtered, route)
 	}
 	return filtered
 }
@@ -762,9 +760,13 @@ func (r *GatewayReconciler) filterTLSRoutesByGateway(ctx context.Context, gw *ga
 func (r *GatewayReconciler) filterUDPRoutesByGateway(ctx context.Context, gw *gatewayv1.Gateway, routes []gatewayv1alpha2.UDPRoute) []gatewayv1alpha2.UDPRoute {
 	var filtered []gatewayv1alpha2.UDPRoute
 	for _, route := range routes {
-		if isAttachable(ctx, gw, &route, route.Status.Parents) && isAllowed(ctx, r.Client, gw, &route) {
-			filtered = append(filtered, route)
+		if !isAttachable(ctx, gw, &route, route.Status.Parents) {
+			continue
 		}
+		if !isAllowed(ctx, r.Client, gw, &route) {
+			continue
+		}
+		filtered = append(filtered, route)
 	}
 	return filtered
 }

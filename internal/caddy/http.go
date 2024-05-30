@@ -41,14 +41,7 @@ func (i *Input) getHTTPServer(s *caddyhttp.Server, l gatewayv1.Listener) (*caddy
 
 		terminal := false
 		matchers := []caddyhttp.Match{}
-		handlers := []caddyhttp.Handler{
-			// TODO: option to enable tracing
-			//&tracing.Tracing{
-			//	// TODO: see if there is a placeholder for a low-cardinality route.
-			//	// Like if one of the caddyfile matchers has a specific path.
-			//	SpanName: "{http.request.method}",
-			//},
-		}
+		handlers := []caddyhttp.Handler{}
 
 		// Match hostnames if any are specified.
 		if len(hr.Spec.Hostnames) > 0 {

@@ -115,6 +115,7 @@ func main() {
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
 		os.Exit(1)
+		return
 	}
 
 	client := mgr.GetClient()
@@ -128,6 +129,7 @@ func main() {
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Gateway")
 		os.Exit(1)
+		return
 	}
 	if err = (&controller.GatewayClassReconciler{
 		Client:   client,
@@ -136,6 +138,7 @@ func main() {
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "GatewayClass")
 		os.Exit(1)
+		return
 	}
 	//if err = (&controller.GRPCRouteReconciler{
 	//	Client:   client,
@@ -144,6 +147,7 @@ func main() {
 	//}).SetupWithManager(mgr); err != nil {
 	//	setupLog.Error(err, "unable to create controller", "controller", "GRPCRoute")
 	//	os.Exit(1)
+	//	return
 	//}
 	if err = (&controller.HTTPRouteReconciler{
 		Client:   client,
@@ -152,31 +156,35 @@ func main() {
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "HTTPRoute")
 		os.Exit(1)
+		return
 	}
-	//if err = (&controller.TCPRouteReconciler{
-	//	Client:   client,
-	//	Scheme:   scheme,
-	//	Recorder: recorder,
-	//}).SetupWithManager(mgr); err != nil {
-	//	setupLog.Error(err, "unable to create controller", "controller", "TCPRoute")
-	//	os.Exit(1)
-	//}
-	//if err = (&controller.TLSRouteReconciler{
-	//	Client:   client,
-	//	Scheme:   scheme,
-	//	Recorder: recorder,
-	//}).SetupWithManager(mgr); err != nil {
-	//	setupLog.Error(err, "unable to create controller", "controller", "TLSRoute")
-	//	os.Exit(1)
-	//}
-	//if err = (&controller.UDPRouteReconciler{
-	//	Client:   client,
-	//	Scheme:   scheme,
-	//	Recorder: recorder,
-	//}).SetupWithManager(mgr); err != nil {
-	//	setupLog.Error(err, "unable to create controller", "controller", "UDPRoute")
-	//	os.Exit(1)
-	//}
+	if err = (&controller.TCPRouteReconciler{
+		Client:   client,
+		Scheme:   scheme,
+		Recorder: recorder,
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "TCPRoute")
+		os.Exit(1)
+		return
+	}
+	if err = (&controller.TLSRouteReconciler{
+		Client:   client,
+		Scheme:   scheme,
+		Recorder: recorder,
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "TLSRoute")
+		os.Exit(1)
+		return
+	}
+	if err = (&controller.UDPRouteReconciler{
+		Client:   client,
+		Scheme:   scheme,
+		Recorder: recorder,
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "UDPRoute")
+		os.Exit(1)
+		return
+	}
 	//+kubebuilder:scaffold:builder
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {

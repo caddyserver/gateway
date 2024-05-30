@@ -82,9 +82,9 @@ func (h *HTTPRouteInput) GetGVK() schema.GroupVersionKind {
 }
 
 func (h *HTTPRouteInput) GetRules() []GenericRule {
-	var rules []GenericRule
-	for _, rule := range h.HTTPRoute.Spec.Rules {
-		rules = append(rules, &HTTPRouteRule{rule})
+	rules := make([]GenericRule, len(h.HTTPRoute.Spec.Rules))
+	for i, rule := range h.HTTPRoute.Spec.Rules {
+		rules[i] = &HTTPRouteRule{rule}
 	}
 	return rules
 }
@@ -105,26 +105,22 @@ func (h *HTTPRouteInput) GetGateway(parent gatewayv1.ParentReference) (*gatewayv
 	if h.gateways == nil {
 		h.gateways = make(map[gatewayv1.ParentReference]*gatewayv1.Gateway)
 	}
-
 	if gw, exists := h.gateways[parent]; exists {
 		return gw, nil
 	}
 
 	ns := gateway.NamespaceDerefOr(parent.Namespace, h.GetNamespace())
 	gw := &gatewayv1.Gateway{}
-
 	if err := h.Client.Get(h.Ctx, client.ObjectKey{Namespace: ns, Name: string(parent.Name)}, gw); err != nil {
 		if !apierrors.IsNotFound(err) {
 			// if it is not just a not found error, we should return the error as something is bad
 			return nil, fmt.Errorf("error while getting gateway: %w", err)
 		}
-
 		// Gateway does not exist skip further checks
-		return nil, fmt.Errorf("gateway %q does not exist: %w", parent.Name, err)
+		return nil, fmt.Errorf("gateway %q (%q) does not exist: %w", parent.Name, ns, err)
 	}
 
 	h.gateways[parent] = gw
-
 	return gw, nil
 }
 

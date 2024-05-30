@@ -10,44 +10,18 @@ import (
 	gateway "github.com/caddyserver/gateway/internal"
 	"github.com/caddyserver/gateway/internal/layer4"
 	"github.com/caddyserver/gateway/internal/layer4/l4proxy"
-	"github.com/caddyserver/gateway/internal/layer4/l4tls"
 	corev1 "k8s.io/api/core/v1"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
-// getTLSServer .
-// TODO: document
-func (i *Input) getTLSServer(s *layer4.Server, l gatewayv1.Listener) (*layer4.Server, error) {
+func (i *Input) getUDPServer(s *layer4.Server, l gatewayv1.Listener) (*layer4.Server, error) {
 	routes := []*layer4.Route{}
-	for _, tr := range i.TLSRoutes {
+	for _, tr := range i.UDPRoutes {
 		if !isRouteForListener(i.Gateway, l, tr.Namespace, tr.Status.RouteStatus) {
 			continue
 		}
 
-		matchers := []layer4.Match{}
-		// Match hostnames if any are specified.
-		if len(tr.Spec.Hostnames) > 0 {
-			// TODO: validate hostnames against listener hostnames, including
-			// a prefix match for wildcards.
-			//
-			// See godoc for HTTPRoute.Spec.Hostnames for more details.
-			matcher := layer4.Match{
-				TLS: &layer4.MatchTLS{
-					SNI: make(layer4.MatchSNI, len(tr.Spec.Hostnames)),
-				},
-			}
-			for i, h := range tr.Spec.Hostnames {
-				matcher.TLS.SNI[i] = string(h)
-			}
-			matchers = append(matchers, matcher)
-		}
-
-		var handlers []layer4.Handler
-		if l.TLS == nil || l.TLS.Mode == nil || *l.TLS.Mode == gatewayv1.TLSModeTerminate {
-			// Add a TLS handler to terminate TLS.
-			handlers = []layer4.Handler{&l4tls.Handler{}}
-		}
-
+		handlers := []layer4.Handler{}
 		for _, rule := range tr.Spec.Rules {
 			// We only support a single backend ref as we don't support weights for layer4 proxy.
 			if len(rule.BackendRefs) != 1 {
@@ -88,11 +62,10 @@ func (i *Input) getTLSServer(s *layer4.Server, l gatewayv1.Listener) (*layer4.Se
 				continue
 			}
 
-			// Add a handler that proxies to the backend service.
 			handlers = append(handlers, &l4proxy.Handler{
 				Upstreams: l4proxy.UpstreamPool{
 					&l4proxy.Upstream{
-						Dial: []string{net.JoinHostPort(service.Spec.ClusterIP, strconv.Itoa(int(*bor.Port)))},
+						Dial: []string{"udp/" + net.JoinHostPort(service.Spec.ClusterIP, strconv.Itoa(int(*bor.Port)))},
 					},
 				},
 			})
@@ -100,8 +73,7 @@ func (i *Input) getTLSServer(s *layer4.Server, l gatewayv1.Listener) (*layer4.Se
 
 		// Add the route.
 		routes = append(routes, &layer4.Route{
-			MatcherSets: matchers,
-			Handlers:    handlers,
+			Handlers: handlers,
 		})
 	}
 

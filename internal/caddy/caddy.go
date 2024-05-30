@@ -20,6 +20,7 @@ import (
 	caddyv2 "github.com/caddyserver/gateway/internal/caddyv2"
 	"github.com/caddyserver/gateway/internal/caddyv2/caddyhttp"
 	"github.com/caddyserver/gateway/internal/caddyv2/caddytls"
+	"github.com/caddyserver/gateway/internal/layer4"
 )
 
 // Config represents the configuration for a Caddy server.
@@ -31,10 +32,9 @@ type Config struct {
 
 // Apps is the configuration for "apps" on a Caddy server.
 type Apps struct {
-	HTTP *caddyhttp.App `json:"http,omitempty"`
-	TLS  *caddytls.TLS  `json:"tls,omitempty"`
-	// TODO: replace the layer4 package with our own definitions.
-	// Layer4 *layer4.App   `json:"layer4,omitempty"`
+	HTTP   *caddyhttp.App `json:"http,omitempty"`
+	TLS    *caddytls.TLS  `json:"tls,omitempty"`
+	Layer4 *layer4.App    `json:"layer4,omitempty"`
 }
 
 // Input is provided to us by the Gateway Controller and is used to
@@ -56,16 +56,16 @@ type Input struct {
 
 	Client client.Client
 
-	httpServers map[string]*caddyhttp.Server
-	// layer4Servers map[string]*layer4.Server
-	config   *Config
-	loadPems []caddytls.CertKeyPEMPair
+	httpServers   map[string]*caddyhttp.Server
+	layer4Servers map[string]*layer4.Server
+	config        *Config
+	loadPems      []caddytls.CertKeyPEMPair
 }
 
 // Config generates a JSON config for use with a Caddy server.
 func (i *Input) Config() ([]byte, error) {
 	i.httpServers = map[string]*caddyhttp.Server{}
-	// i.layer4Servers = map[string]*layer4.Server{}
+	i.layer4Servers = map[string]*layer4.Server{}
 	i.config = &Config{
 		Admin: &caddyv2.AdminConfig{Listen: ":2019"},
 		Apps:  &Apps{},
@@ -87,8 +87,6 @@ func (i *Input) Config() ([]byte, error) {
 						Body:       "unable to route request\n",
 						Headers: http.Header{
 							"Caddy-Instance": {"{system.hostname}"},
-							// TODO: remove
-							// "Trace-ID":       {"{http.vars.trace_id}"},
 						},
 					},
 				},
@@ -104,11 +102,11 @@ func (i *Input) Config() ([]byte, error) {
 			GracePeriod: caddyv2.Duration(15 * time.Second),
 		}
 	}
-	//if len(i.layer4Servers) > 0 {
-	//	i.config.Apps.Layer4 = &layer4.App{
-	//		Servers: i.layer4Servers,
-	//	}
-	//}
+	if len(i.layer4Servers) > 0 {
+		i.config.Apps.Layer4 = &layer4.App{
+			Servers: i.layer4Servers,
+		}
+	}
 	if len(i.loadPems) > 0 {
 		i.config.Apps.TLS = &caddytls.TLS{
 			Certificates: &caddytls.Certificates{
@@ -123,32 +121,26 @@ func (i *Input) Config() ([]byte, error) {
 func (i *Input) handleListener(l gatewayv1.Listener) error {
 	switch l.Protocol {
 	case gatewayv1.HTTPProtocolType:
-		break
+		return i.handleHTTPListener(l)
 	case gatewayv1.HTTPSProtocolType:
-		break
+		// If TLS mode is not Terminate, then ignore the listener. We cannot do HTTP routing while
+		// doing TLS passthrough as we need to decrypt the request in order to route it.
+		if l.TLS != nil && l.TLS.Mode != nil && *l.TLS.Mode != gatewayv1.TLSModeTerminate {
+			return nil
+		}
+		return i.handleHTTPListener(l)
 	case gatewayv1.TLSProtocolType:
-		break
+		return i.handleLayer4Listener(l)
 	case gatewayv1.TCPProtocolType:
-		// TODO: implement
-		return nil
+		return i.handleLayer4Listener(l)
 	case gatewayv1.UDPProtocolType:
-		// TODO: implement
-		return nil
+		return i.handleLayer4Listener(l)
 	default:
 		return nil
 	}
+}
 
-	// Defaults to Terminate which is fine, we do need to handle Passthrough
-	// differently.
-	if l.TLS != nil && l.TLS.Mode != nil && *l.TLS.Mode == gatewayv1.TLSModePassthrough {
-		//server, err := i.getTLSServer(l)
-		//if err != nil {
-		//	return err
-		//}
-		//i.layer4Servers[string(l.Name)] = server
-		return nil
-	}
-
+func (i *Input) handleHTTPListener(l gatewayv1.Listener) error {
 	key := strconv.Itoa(int(l.Port))
 	s, ok := i.httpServers[key]
 	if !ok {
@@ -176,8 +168,6 @@ func (i *Input) handleListener(l gatewayv1.Listener) error {
 								Body:       "{http.error.status_code} {http.error.status_text}\n\n{http.error.message}\n",
 								Headers: http.Header{
 									"Caddy-Instance": {"{system.hostname}"},
-									// TODO: remove
-									// "Trace-ID":       {"{http.vars.trace_id}"},
 								},
 							},
 						},
@@ -192,6 +182,40 @@ func (i *Input) handleListener(l gatewayv1.Listener) error {
 		return err
 	}
 	i.httpServers[key] = server
+	return nil
+}
+
+func (i *Input) handleLayer4Listener(l gatewayv1.Listener) error {
+	proto := "tcp"
+	if l.Protocol == gatewayv1.UDPProtocolType {
+		proto = "udp"
+	}
+	key := proto + "/" + strconv.Itoa(int(l.Port))
+	s, ok := i.layer4Servers[key]
+	if !ok {
+		s = &layer4.Server{
+			Listen: []string{proto + "/:" + strconv.Itoa(int(l.Port))},
+		}
+	}
+
+	var (
+		server *layer4.Server
+		err    error
+	)
+	switch l.Protocol {
+	case gatewayv1.TLSProtocolType:
+		server, err = i.getTLSServer(s, l)
+	case gatewayv1.TCPProtocolType:
+		server, err = i.getTCPServer(s, l)
+	case gatewayv1.UDPProtocolType:
+		server, err = i.getUDPServer(s, l)
+	default:
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	i.layer4Servers[key] = server
 	return nil
 }
 
