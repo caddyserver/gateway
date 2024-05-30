@@ -685,37 +685,17 @@ func (r *GatewayReconciler) handleReconcileErrorWithStatus(ctx context.Context, 
 // filterHTTPRoutesByGateway .
 // TODO
 func (r *GatewayReconciler) filterHTTPRoutesByGateway(ctx context.Context, gw *gatewayv1.Gateway, routes []gatewayv1.HTTPRoute) []gatewayv1.HTTPRoute {
-	_log := log.FromContext(
-		ctx,
-		"gateway", types.NamespacedName{
-			Namespace: gw.Namespace,
-			Name:      gw.Name,
-		},
-	)
 	var filtered []gatewayv1.HTTPRoute
 	for _, route := range routes {
-		log2 := _log.WithValues("route", types.NamespacedName{
-			Namespace: route.Namespace,
-			Name:      route.Name,
-		})
-
-		ctx2 := log.IntoContext(ctx, log2)
-
-		if !isAttachable(ctx2, gw, &route, route.Status.Parents) {
-			log2.Info("route is not attachable")
+		if !isAttachable(ctx, gw, &route, route.Status.Parents) {
 			continue
 		}
-
-		if !isAllowed(ctx2, r.Client, gw, &route) {
-			log2.Info("route is not allowed")
+		if !isAllowed(ctx, r.Client, gw, &route) {
 			continue
 		}
-
-		//if len(computeHosts(gw, route.Spec.Hostnames)) > 1 {
-		//	log2.Info("couldn't compute hosts")
-		//	continue
-		//}
-
+		// if len(computeHosts(gw, route.Spec.Hostnames)) > 1 {
+		// 	continue
+		// }
 		filtered = append(filtered, route)
 	}
 	return filtered
@@ -726,9 +706,16 @@ func (r *GatewayReconciler) filterHTTPRoutesByGateway(ctx context.Context, gw *g
 func (r *GatewayReconciler) filterGRPCRoutesByGateway(ctx context.Context, gw *gatewayv1.Gateway, routes []gatewayv1.GRPCRoute) []gatewayv1.GRPCRoute {
 	var filtered []gatewayv1.GRPCRoute
 	for _, route := range routes {
-		if isAttachable(ctx, gw, &route, route.Status.Parents) && isAllowed(ctx, r.Client, gw, &route) && len(computeHosts(gw, route.Spec.Hostnames)) > 0 {
-			filtered = append(filtered, route)
+		if !isAttachable(ctx, gw, &route, route.Status.Parents) {
+			continue
 		}
+		if !isAllowed(ctx, r.Client, gw, &route) {
+			continue
+		}
+		// if len(computeHosts(gw, route.Spec.Hostnames)) > 1 {
+		// 	continue
+		// }
+		filtered = append(filtered, route)
 	}
 	return filtered
 }
@@ -738,9 +725,13 @@ func (r *GatewayReconciler) filterGRPCRoutesByGateway(ctx context.Context, gw *g
 func (r *GatewayReconciler) filterTCPRoutesByGateway(ctx context.Context, gw *gatewayv1.Gateway, routes []gatewayv1alpha2.TCPRoute) []gatewayv1alpha2.TCPRoute {
 	var filtered []gatewayv1alpha2.TCPRoute
 	for _, route := range routes {
-		if isAttachable(ctx, gw, &route, route.Status.Parents) && isAllowed(ctx, r.Client, gw, &route) {
-			filtered = append(filtered, route)
+		if !isAttachable(ctx, gw, &route, route.Status.Parents) {
+			continue
 		}
+		if !isAllowed(ctx, r.Client, gw, &route) {
+			continue
+		}
+		filtered = append(filtered, route)
 	}
 	return filtered
 }
@@ -750,9 +741,16 @@ func (r *GatewayReconciler) filterTCPRoutesByGateway(ctx context.Context, gw *ga
 func (r *GatewayReconciler) filterTLSRoutesByGateway(ctx context.Context, gw *gatewayv1.Gateway, routes []gatewayv1alpha2.TLSRoute) []gatewayv1alpha2.TLSRoute {
 	var filtered []gatewayv1alpha2.TLSRoute
 	for _, route := range routes {
-		if isAttachable(ctx, gw, &route, route.Status.Parents) && isAllowed(ctx, r.Client, gw, &route) && len(computeHosts(gw, route.Spec.Hostnames)) > 0 {
-			filtered = append(filtered, route)
+		if !isAttachable(ctx, gw, &route, route.Status.Parents) {
+			continue
 		}
+		if !isAllowed(ctx, r.Client, gw, &route) {
+			continue
+		}
+		// if len(computeHosts(gw, route.Spec.Hostnames)) > 1 {
+		// 	continue
+		// }
+		filtered = append(filtered, route)
 	}
 	return filtered
 }
@@ -762,9 +760,13 @@ func (r *GatewayReconciler) filterTLSRoutesByGateway(ctx context.Context, gw *ga
 func (r *GatewayReconciler) filterUDPRoutesByGateway(ctx context.Context, gw *gatewayv1.Gateway, routes []gatewayv1alpha2.UDPRoute) []gatewayv1alpha2.UDPRoute {
 	var filtered []gatewayv1alpha2.UDPRoute
 	for _, route := range routes {
-		if isAttachable(ctx, gw, &route, route.Status.Parents) && isAllowed(ctx, r.Client, gw, &route) {
-			filtered = append(filtered, route)
+		if !isAttachable(ctx, gw, &route, route.Status.Parents) {
+			continue
 		}
+		if !isAllowed(ctx, r.Client, gw, &route) {
+			continue
+		}
+		filtered = append(filtered, route)
 	}
 	return filtered
 }

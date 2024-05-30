@@ -75,14 +75,17 @@ func (r *TLSRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	}
 
 	if err := mgr.GetFieldIndexer().IndexField(ctx, &gatewayv1alpha2.TLSRoute{}, gatewayIndex, func(o client.Object) []string {
-		hr := o.(*gatewayv1alpha2.TLSRoute)
+		route, ok := o.(*gatewayv1alpha2.TLSRoute)
+		if !ok {
+			return nil
+		}
 		var gateways []string
-		for _, parent := range hr.Spec.ParentRefs {
+		for _, parent := range route.Spec.ParentRefs {
 			if !gateway.IsGateway(parent) {
 				continue
 			}
 			gateways = append(gateways, types.NamespacedName{
-				Namespace: gateway.NamespaceDerefOr(parent.Namespace, hr.Namespace),
+				Namespace: gateway.NamespaceDerefOr(parent.Namespace, route.Namespace),
 				Name:      string(parent.Name),
 			}.String())
 		}
@@ -165,7 +168,6 @@ func (r *TLSRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 			if err != nil {
 				return r.handleReconcileErrorWithStatus(ctx, fmt.Errorf("failed to apply Gateway check: %w", err), original, route)
 			}
-
 			if !continueCheck {
 				break
 			}
@@ -181,7 +183,6 @@ func (r *TLSRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		if err != nil {
 			return r.handleReconcileErrorWithStatus(ctx, fmt.Errorf("failed to apply Backend check: %w", err), original, route)
 		}
-
 		if !continueCheck {
 			break
 		}
