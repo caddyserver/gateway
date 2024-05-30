@@ -86,11 +86,6 @@ spec:
     app.kubernetes.io/instance: caddy
     app.kubernetes.io/part-of: caddy
   ports:
-    - name: admin
-      port: 2021
-      targetPort: 2021
-      protocol: TCP
-      appProtocol: http2
     - name: http
       port: 80
       targetPort: 80
@@ -106,11 +101,6 @@ spec:
       targetPort: 443
       protocol: UDP
       appProtocol: http3
-    - name: admin2
-      port: 2019
-      targetPort: 2019
-      protocol: TCP
-      appProtocol: http
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -142,7 +132,7 @@ spec:
     spec:
       containers:
         - name: kube-rbac-proxy
-          image: quay.io/brancz/kube-rbac-proxy:v0.15.0@sha256:2c7b120590cbe9f634f5099f2cbb91d0b668569023a81505ca124a5c437e7663
+          image: quay.io/brancz/kube-rbac-proxy:v0.17.1@sha256:89d0be6da831f45fb53e7e40d216555997ccf6e27d66f62e50eb9a69ff9c9801
           args:
             - --secure-listen-address=:2021
             - --upstream=http://[::1]:2019/
@@ -150,7 +140,7 @@ spec:
             - --client-ca-file=/var/run/secrets/tls/ca.crt
             - --tls-cert-file=/var/run/secrets/tls/tls.crt
             - --tls-private-key-file=/var/run/secrets/tls/tls.key
-            - --tls-reload-interval=12h
+            - --tls-reload-interval=1h
             - --config-file=/etc/kube-rbac-proxy/config.yaml
           ports:
             - name: admin
@@ -176,9 +166,6 @@ spec:
             - name: tls
               readOnly: true
               mountPath: /var/run/secrets/tls
-            - name: kube-api-access
-              readOnly: true
-              mountPath: /var/run/secrets/kubernetes.io/serviceaccount
           securityContext:
             capabilities:
               drop:
@@ -187,7 +174,7 @@ spec:
             readOnlyRootFilesystem: true
             allowPrivilegeEscalation: false
         - name: caddy
-          image: docker.io/library/caddy:2.8.0-rc.1@sha256:09b415c1f8fa012f849386e343a9e7d1dad579e50ee8c71456798469e91d0e37
+          image: ghcr.io/caddyserver/gateway:caddy-2.8.0@sha256:8bb7a02be0e6d61d8727e6d55359ffecd33d0d7134984eec08202d010645ead5
           args:
             - run
           ports:
@@ -200,9 +187,6 @@ spec:
             - name: http3
               containerPort: 443
               protocol: UDP
-            - name: admin2
-              containerPort: 2019
-              protocol: TCP
           env:
             - name: CADDY_ADMIN
               value: :2019
@@ -231,17 +215,17 @@ spec:
           livenessProbe:
             httpGet:
               path: /metrics
-              port: admin2
+              port: 2019
           readinessProbe:
             httpGet:
               path: /metrics
-              port: admin2
+              port: 2019
             initialDelaySeconds: 2
             timeoutSeconds: 1
           startupProbe:
             httpGet:
               path: /metrics
-              port: admin2
+              port: 2019
             failureThreshold: 10
             successThreshold: 1
             initialDelaySeconds: 3
