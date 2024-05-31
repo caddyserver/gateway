@@ -174,7 +174,7 @@ spec:
             readOnlyRootFilesystem: true
             allowPrivilegeEscalation: false
         - name: caddy
-          image: ghcr.io/caddyserver/gateway:caddy-2.8.0@sha256:8bb7a02be0e6d61d8727e6d55359ffecd33d0d7134984eec08202d010645ead5
+          image: ghcr.io/caddyserver/gateway:caddy-2.8.1
           args:
             - run
           ports:
