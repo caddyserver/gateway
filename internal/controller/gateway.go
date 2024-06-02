@@ -46,8 +46,10 @@ import (
 // +kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=gateways,verbs=get;list;watch
 // +kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=gateways/status,verbs=patch;update
 // +kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=referencegrants,verbs=get;list;watch
+// +kubebuilder:rbac:groups=core,resources=services,verbs=update
 
 // +kubebuilder:rbac:groups=core,resources=endpoints,verbs=get;list;watch
+// +kubebuilder:rbac:groups=core,resources=configmaps,verbs=get;list;watch
 
 type GatewayReconciler struct {
 	client.Client
@@ -214,6 +216,18 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		return ctrl.Result{}, nil
 	}
 	log.Info("Reconciling")
+
+	// Reconcile the service
+	svc, err := r.getService(ctx, gw)
+	if err != nil {
+		log.Error(err, "Unable to get Service for Gateway")
+		return r.handleReconcileErrorWithStatus(ctx, err, original, gw)
+	}
+	svc.Spec.Ports = getServicePortsForGateway(gw)
+	if err := r.Client.Update(ctx, svc); err != nil {
+		log.Error(err, "Unable to update Service for Gateway")
+		return r.handleReconcileErrorWithStatus(ctx, err, original, gw)
+	}
 
 	httpRouteList := &gatewayv1.HTTPRouteList{}
 	if err := r.Client.List(ctx, httpRouteList); err != nil {

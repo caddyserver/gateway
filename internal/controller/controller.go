@@ -32,6 +32,10 @@ import (
 // be able to configure TLS on gateways.
 // +kubebuilder:rbac:groups=core,resources=secrets,verbs=get;list;watch
 
+// Add RBAC permissions to get Services, we need this to get the IPs for services referenced by
+// Route resources.
+// +kubebuilder:rbac:groups=core,resources=services,verbs=get;list;watch
+
 const (
 	owningGatewayLabel = "gateway.caddyserver.com/owning-gateway"
 
