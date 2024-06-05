@@ -13,7 +13,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-22.04]
-        go: ["1.22.3"]
+        go: ["1.22.4"]
     permissions:
       attestations: write
       id-token: write
