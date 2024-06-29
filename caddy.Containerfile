@@ -8,7 +8,9 @@ ARG CADDY_HASH=sha256:51b5e778a16d77474c37f8d1d966e6863cdb1c7478396b04b806169fed
 
 FROM docker.io/library/caddy:${CADDY_VERSION}-builder@${CADDY_BUILDER_HASH} AS builder
 
-RUN xcaddy build \
+RUN XCADDY_SETCAP=0 \
+	XCADDY_SUDO=0 \
+	xcaddy build \
     --with github.com/mholt/caddy-l4@6a8be7c4b8acb0c531b6151c94a9cd80894acce1
 
 FROM docker.io/library/caddy:${CADDY_VERSION}@${CADDY_HASH}
