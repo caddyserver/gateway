@@ -22,7 +22,7 @@ jobs:
         uses: DeterminateSystems/nix-installer-action@7993355175c2765e5733dae74f3e0786fe0e5c4f # v12
 
       - name: Nix Cache
-        uses: DeterminateSystems/magic-nix-cache-action@87e8236f46702ab0ce5a058b605a173ec88d618e # v6
+        uses: DeterminateSystems/magic-nix-cache-action@b46e247b898aa56e6d2d2e728dc6df6c84fdb738 # v7
 
       - name: nix flake check
         run: nix flake check --all-systems
