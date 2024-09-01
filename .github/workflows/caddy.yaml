@@ -55,7 +55,7 @@ jobs:
             CADDY_HASH=sha256:51b5e778a16d77474c37f8d1d966e6863cdb1c7478396b04b806169fed0abac9
 
       - name: Attest
-        uses: actions/attest-build-provenance@210c1913531870065f03ce1f9440dd87bc0938cd # v1.4.0
+        uses: actions/attest-build-provenance@6149ea5740be74af77f260b9db67e633f6b0a9a1 # v1.4.2
         id: attest
         with:
           subject-name: ghcr.io/caddyserver/gateway
