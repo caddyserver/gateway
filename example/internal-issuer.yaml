@@ -1,5 +1,4 @@
 # https://cert-manager.io/docs/configuration/selfsigned/#bootstrapping-ca-issuers
----
 apiVersion: cert-manager.io/v1
 kind: Issuer
 metadata:

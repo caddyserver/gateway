@@ -15,8 +15,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-22.04]
-        go: ["1.21.11", "1.22.4"]
+        os: [ubuntu-24.04]
+        go: ["1.23.7", "1.24.1"]
     permissions:
       contents: read
     steps:
@@ -38,10 +38,18 @@ jobs:
         env:
           CGO_ENABLED: 0
         run: |
+          # This ShellCheck disable is for word-splitting which is something we
+          # need to occur for this command to work correctly.
+          #
+          # shellcheck disable=SC2046
           go test $(go list ./... | grep -v /e2e)
 
       - name: go test -race
         env:
           CGO_ENABLED: 1
         run: |
+          # This ShellCheck disable is for word-splitting which is something we
+          # need to occur for this command to work correctly.
+          #
+          # shellcheck disable=SC2046
           go test -race $(go list ./... | grep -v /e2e)

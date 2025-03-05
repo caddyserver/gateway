@@ -12,8 +12,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-22.04]
-        go: ["1.22.4"]
+        os: [ubuntu-24.04]
+        go: ["1.23.7"]
     permissions:
       attestations: write
       id-token: write
@@ -60,10 +60,10 @@ jobs:
         run: |
           set -euo pipefail
 
-          checksum_file=$(echo "${ARTIFACTS}" | jq -r '.[] | select (.type == "Checksum") | .path')
-          echo "hashes=$(cat $checksum_file | base64 -w0)" >> "$GITHUB_OUTPUT"
-          tag_name=$(echo "${METADATA}" | jq -r '.tag')
-          echo "tag_name=${tag_name}" >> "$GITHUB_OUTPUT"
+          checksum_file="$(echo "$ARTIFACTS" | jq -r '.[] | select (.type == "Checksum") | .path')"
+          echo 'hashes='"$(base64 -w0 < "$checksum_file")" >> "$GITHUB_OUTPUT"
+          tag_name="$(echo "$METADATA" | jq -r '.tag')"
+          echo 'tag_name='"$tag_name" >> "$GITHUB_OUTPUT"
     outputs:
       hashes: "${{ steps.slsa.outputs.hashes }}"
       tag_name: "${{ steps.slsa.outputs.tag_name }}"
