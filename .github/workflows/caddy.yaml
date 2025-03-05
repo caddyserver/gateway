@@ -10,7 +10,7 @@ on:
 jobs:
   build-image:
     name: Build Image
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     permissions:
       attestations: write
       contents: read
@@ -48,11 +48,11 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           sbom: true
-          tags: ghcr.io/caddyserver/gateway:caddy-2.8.4
+          tags: ghcr.io/caddyserver/gateway:caddy-2.9.1
           build-args: |
-            CADDY_VERSION=2.8.4
-            CADDY_BUILDER_HASH=sha256:55508f3d559b518d77d8ad453453c02ef616d7697c2a1503feb091123e9751c8
-            CADDY_HASH=sha256:51b5e778a16d77474c37f8d1d966e6863cdb1c7478396b04b806169fed0abac9
+            CADDY_VERSION=2.9.1
+            CADDY_BUILDER_HASH=sha256:4c455f2cf685637594f7112b2526229a58a6039975fd1915281d452b2075bda3
+            CADDY_HASH=sha256:1c4bc9ead95a0888f1eea3a56ef79f30bd0d271229828fdd25090d898f553571
 
       - name: Attest
         uses: actions/attest-build-provenance@210c1913531870065f03ce1f9440dd87bc0938cd # v1.4.0
