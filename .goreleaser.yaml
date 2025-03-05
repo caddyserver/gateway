@@ -1,5 +1,5 @@
 # yaml-language-server: $schema=https://goreleaser.com/static/schema.json
-version: 1
+version: 2
 
 before:
   hooks:
@@ -29,22 +29,23 @@ builds:
 
 kos:
   - build: gateway
-    repository: ghcr.io/caddyserver/gateway
+    repositories:
+      - ghcr.io/caddyserver/gateway
     platforms:
       - linux/amd64
       - linux/arm64
     tags:
-      - '{{.Tag}}'
+      - "{{ .Tag }}"
       # TODO: find a way to set the latest package tag, only when the release gets published on GitHub.
       # We can trigger an action on release_published, but we then need to write a system that "pushes"
       # the `latest` manifest.
-      - '{{ if not .Prerelease }}latest{{ end }}'
-    creation_time: '{{ .CommitTimestamp }}'
-    ko_data_creation_time: '{{ .CommitTimestamp }}'
+      - "{{ if not .Prerelease }}latest{{ end }}"
+    creation_time: "{{ .CommitTimestamp }}"
+    ko_data_creation_time: "{{ .CommitTimestamp }}"
     sbom: 'spdx'
     bare: true
     preserve_import_paths: false
-    base_image: "gcr.io/distroless/static-debian12:nonroot"
+    base_image: gcr.io/distroless/static-debian12:nonroot
     labels:
       org.opencontainers.image.description: "Kubernetes Gateway API implementation powered by Caddy"
       org.opencontainers.image.licenses: Apache-2.0"
