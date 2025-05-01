@@ -37,7 +37,7 @@ jobs:
         uses: anchore/sbom-action/download-syft@9f7302141466aa6482940f15371237e9d9f4c34a # v0.19.0
 
       - name: Install ko
-        uses: ko-build/setup-ko@d982fec422852203cfb2053a8ec6ad302280d04d # v0.8
+        uses: ko-build/setup-ko@d006021bd0c28d1ce33a07e7943d48b079944c8d # v0.9
 
       # https://github.com/actions/checkout/issues/290#issuecomment-680260080
       - name: Fetch upstream tags
