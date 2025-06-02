@@ -40,7 +40,7 @@ for any Route resources and is where your requests will be processed.
 
 ## Gateway API Support
 
-Requires Gateway API v1.1.0 CRDs to be installed on your cluster (some experimental CRDs are supported but are optional)
+Requires Gateway API v1.3.0 CRDs to be installed on your cluster (some experimental CRDs are supported but are optional)
 
 ### Resource Support
 
@@ -74,26 +74,26 @@ We recommend installing all Gateway API CRDs, including those that are experimen
 
 ```bash
 # Install Gateway API CRDs (including those that are experimental)
-kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.1.0/experimental-install.yaml
+kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.3.0/experimental-install.yaml
 
 # Install Gateway API CRDs (only stable resources)
 # NOTE: **Do not use this command if you already ran the `experimental-install`**
-kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.1.0/standard-install.yaml
+kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.3.0/standard-install.yaml
 ```
 
 ### Installing the Controller and Caddy
 
-The Controller requires you to provide your own Caddy instance, later we may provide a CRD that
-will allow us to automatically deploy and manage Caddy for you, but for now you can use our pre-made
-deployment templates (or bring your own).
+The Controller requires you to provide your own Caddy instance. In the future, we may provide a CRD
+that will allow us to automatically deploy and manage Caddy for you, but for now you can use our
+pre-made deployment templates (or bring your own).
 
 Before deploying Caddy however, there are a few things you need to consider.
 
 1. Due to the way we program Caddy, we send an HTTP request to each Caddy pod. If your Caddy instances
    do _not_ use TLS on the Admin API, any certificates programmed into Caddy will be sent over an
-   unsecure connection and may be visible to malicious actors.
+   insecure connection and may be visible to malicious actors.
 2. Enforce strict NetworkPolicies on who can access the Caddy Admin API. Your Caddy instance will
-   likely be exposed to the public internet and exposing the Caddy Admin API is extremely dangerous for
+   likely be exposed to the public internet and access the Caddy Admin API is extremely dangerous for
    security.
 
 The following example will get you up and running with the Controller and Caddy in a secure way.

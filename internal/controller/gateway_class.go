@@ -4,6 +4,7 @@
 package controller
 
 import (
+	"cmp"
 	"context"
 	"slices"
 
@@ -118,31 +119,33 @@ func (r *GatewayClassReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	})
 
 	supportedFeatures := []gatewayv1.SupportedFeature{
-		"Gateway",
-		// "GatewayPort8080",
-		// "GatewayStaticAddresses",
-		"HTTPRoute",
-		// "HTTPRouteDestinationPortMatching",
+		{Name: "Gateway"},
+		// {Name: "GatewayPort8080"},
+		// {Name: "GatewayStaticAddresses"},
+		{Name: "HTTPRoute"},
+		// {Name: "HTTPRouteDestinationPortMatching"},
 		// TODO: enable once we support URLRewrite Hostname
-		// "HTTPRouteHostRewrite",
-		"HTTPRouteMethodMatching",
-		"HTTPRoutePathRedirect",
+		// {Name: "HTTPRouteHostRewrite"},
+		{Name: "HTTPRouteMethodMatching"},
+		{Name: "HTTPRoutePathRedirect"},
 		// TODO: enable once we support URLRewrite Path
-		// "HTTPRoutePathRewrite",
-		"HTTPRoutePortRedirect",
-		"HTTPRouteQueryParamMatching",
-		// "HTTPRouteRequestMirror",
-		// "HTTPRouteRequestMultipleMirrors",
-		"HTTPRouteResponseHeaderModification",
-		"HTTPRouteSchemeRedirect",
-		// "Mesh",
-		"ReferenceGrant",
-		// "TLSRoute",
+		// {Name: "HTTPRoutePathRewrite"},
+		{Name: "HTTPRoutePortRedirect"},
+		{Name: "HTTPRouteQueryParamMatching"},
+		// {Name: "HTTPRouteRequestMirror"},
+		// {Name: "HTTPRouteRequestMultipleMirrors"},
+		{Name: "HTTPRouteResponseHeaderModification"},
+		{Name: "HTTPRouteSchemeRedirect"},
+		// {Name: "Mesh"},
+		{Name: "ReferenceGrant"},
+		// {Name: "TLSRoute"},
 	}
 
 	// The Gateway API spec requires that the supported features array be sorted
 	// in "ascending alphabetical order".
-	slices.Sort(supportedFeatures)
+	slices.SortFunc(supportedFeatures, func(x, y gatewayv1.SupportedFeature) int {
+		return cmp.Compare(x.Name, y.Name)
+	})
 	gwc.Status.SupportedFeatures = supportedFeatures
 
 	// Save changes to the GatewayClass's status.
