@@ -37,7 +37,7 @@
         # Configure the default devShell with common development dependencies.
         devShells.default = pkgs.mkShellNoCC {
           buildInputs = with pkgs; [
-            go_1_23
+            go_1_24
             gofumpt
             golangci-lint
             gotools
