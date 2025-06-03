@@ -13,7 +13,6 @@ import (
 	"io"
 	"net"
 	"net/http"
-	"os"
 	"sync"
 
 	"github.com/google/go-cmp/cmp"
@@ -71,26 +70,26 @@ func (r *GatewayReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		),
 	)
 
-	r.rootCAs = x509.NewCertPool()
-	v, err := os.ReadFile("/var/run/secrets/tls/ca.crt")
-	if err != nil {
-		return fmt.Errorf("error reading ca_path: %w", err)
-	}
-	if ok := r.rootCAs.AppendCertsFromPEM(v); !ok {
-		return errors.New("failed to load ca certificates")
-	}
-	r.certwatcher = &certwatcher.TLSConfig{
-		CertPath: "/var/run/secrets/tls/tls.crt",
-		KeyPath:  "/var/run/secrets/tls/tls.key",
-		Config: &tls.Config{
-			RootCAs: r.rootCAs,
-		},
-		DontStaple: true,
-	}
-	r.tlsConfig, err = r.certwatcher.GetTLSConfig(context.Background())
-	if err != nil {
-		return err
-	}
+	// r.rootCAs = x509.NewCertPool()
+	// v, err := os.ReadFile("/var/run/secrets/tls/ca.crt")
+	// if err != nil {
+	// 	return fmt.Errorf("error reading ca_path: %w", err)
+	// }
+	// if ok := r.rootCAs.AppendCertsFromPEM(v); !ok {
+	// 	return errors.New("failed to load ca certificates")
+	// }
+	// r.certwatcher = &certwatcher.TLSConfig{
+	// 	CertPath: "/var/run/secrets/tls/tls.crt",
+	// 	KeyPath:  "/var/run/secrets/tls/tls.key",
+	// 	Config: &tls.Config{
+	// 		RootCAs: r.rootCAs,
+	// 	},
+	// 	DontStaple: true,
+	// }
+	// r.tlsConfig, err = r.certwatcher.GetTLSConfig(context.Background())
+	// if err != nil {
+	// 	return err
+	// }
 
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&gatewayv1.Gateway{}, ctrlPredicate).

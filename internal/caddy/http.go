@@ -167,7 +167,7 @@ func (i *Input) getHTTPServer(s *caddyhttp.Server, l gatewayv1.Listener) (*caddy
 					location.WriteString("://")
 					location.WriteString(hostname)
 
-					// Add the port to the Location header.
+					// Add the port to the Location header if necessary.
 					switch {
 					case scheme == "http" && port == 80:
 						break
@@ -279,6 +279,13 @@ func (i *Input) getHTTPServer(s *caddyhttp.Server, l gatewayv1.Listener) (*caddy
 					// want request mirroring.
 					// ref; https://github.com/caddyserver/caddy/issues/4211
 					//
+					// TODO: implement
+				case gatewayv1.HTTPRouteFilterCORS:
+					v := f.CORS
+					if v == nil {
+						break
+					}
+
 					// TODO: implement
 				case gatewayv1.HTTPRouteFilterExtensionRef:
 					v := f.ExtensionRef

@@ -10,6 +10,7 @@ import (
 	"github.com/google/go-cmp/cmp/cmpopts"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
@@ -21,9 +22,11 @@ import (
 	gateway "github.com/caddyserver/gateway/internal"
 )
 
-// Add RBAC permissions to get CRDs, so we can verify that the gateway-api CRDs
-// are not just installed but also a supported version.
-// +kubebuilder:rbac:groups=apiextensions.k8s.io,resources=customresourcedefinitions,verbs=get
+type GatewayAPIInfo struct {
+	BundleVersion string
+	Channel       string
+	Resources     []schema.GroupVersionKind
+}
 
 // Add RBAC permissions to get ConfigMaps, we use it for BackendTLSPolicies.
 // +kubebuilder:rbac:groups=core,resources=configmaps,verbs=get;list;watch
@@ -62,7 +65,7 @@ func hasMatchingController(ctx context.Context, c client.Reader) func(object cli
 }
 
 // onlyStatusChanged returns true if and only if there is status change for underlying objects.
-// Supported objects are GatewayClass, Gateway, HTTPRoute and GRPCRoute
+// Supported objects are GatewayClass, Gateway, HTTPRoute, and GRPCRoute
 func onlyStatusChanged() predicate.Predicate {
 	option := cmpopts.IgnoreFields(metav1.Condition{}, "LastTransitionTime")
 	return predicate.Funcs{

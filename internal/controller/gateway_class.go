@@ -20,10 +20,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
+	"sigs.k8s.io/gateway-api/pkg/features"
 
 	gateway "github.com/caddyserver/gateway/internal"
 )
 
+// Add RBAC permissions for GatewayClasses.
+//
 // +kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=gatewayclasses,verbs=get;list;watch
 // +kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=gatewayclasses/status,verbs=patch;update
 // +kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=gatewayclasses/finalizers,verbs=update
@@ -33,6 +36,8 @@ type GatewayClassReconciler struct {
 
 	Scheme   *runtime.Scheme
 	Recorder record.EventRecorder
+
+	Info *GatewayAPIInfo
 }
 
 var _ reconcile.Reconciler = (*GatewayClassReconciler)(nil)
@@ -102,43 +107,71 @@ func (r *GatewayClassReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	//}
 
 	meta.SetStatusCondition(&gwc.Status.Conditions, metav1.Condition{
-		Type:   string(gatewayv1.GatewayClassConditionStatusAccepted),
-		Status: metav1.ConditionTrue,
-		Reason: string(gatewayv1.GatewayClassReasonAccepted),
-		// Reason:  string(gatewayv1.GatewayClassReasonInvalidParameters),
+		Type:    string(gatewayv1.GatewayClassConditionStatusAccepted),
+		Status:  metav1.ConditionTrue,
+		Reason:  string(gatewayv1.GatewayClassReasonAccepted), // gatewayv1.GatewayClassReasonInvalidParameters
 		Message: "",
 	})
 
-	// TODO: validate CRD versions.
 	meta.SetStatusCondition(&gwc.Status.Conditions, metav1.Condition{
-		Type:   string(gatewayv1.GatewayClassConditionStatusSupportedVersion),
-		Status: metav1.ConditionTrue,
-		Reason: string(gatewayv1.GatewayClassReasonSupportedVersion),
-		// Reason:  string(gatewayv1.GatewayClassReasonUnsupportedVersion),
-		Message: "Gateway API CRD bundle version v1.0.0 is supported.",
+		Type:    string(gatewayv1.GatewayClassConditionStatusSupportedVersion),
+		Status:  metav1.ConditionTrue,
+		Reason:  string(gatewayv1.GatewayClassReasonSupportedVersion), // gatewayv1.GatewayClassReasonUnsupportedVersion
+		Message: "Gateway API CRD bundle version " + r.Info.BundleVersion + " is supported.",
 	})
 
 	supportedFeatures := []gatewayv1.SupportedFeature{
-		{Name: "Gateway"},
-		// {Name: "GatewayPort8080"},
-		// {Name: "GatewayStaticAddresses"},
-		{Name: "HTTPRoute"},
-		// {Name: "HTTPRouteDestinationPortMatching"},
-		// TODO: enable once we support URLRewrite Hostname
-		// {Name: "HTTPRouteHostRewrite"},
-		{Name: "HTTPRouteMethodMatching"},
-		{Name: "HTTPRoutePathRedirect"},
-		// TODO: enable once we support URLRewrite Path
-		// {Name: "HTTPRoutePathRewrite"},
-		{Name: "HTTPRoutePortRedirect"},
-		{Name: "HTTPRouteQueryParamMatching"},
-		// {Name: "HTTPRouteRequestMirror"},
-		// {Name: "HTTPRouteRequestMultipleMirrors"},
-		{Name: "HTTPRouteResponseHeaderModification"},
-		{Name: "HTTPRouteSchemeRedirect"},
-		// {Name: "Mesh"},
-		{Name: "ReferenceGrant"},
-		// {Name: "TLSRoute"},
+		//
+		// Gateway Features
+		//
+
+		{Name: gatewayv1.FeatureName(features.SupportGateway)},
+		// {Name: gatewayv1.FeatureName(features.SupportGatewayPort8080)},
+		// {Name: gatewayv1.FeatureName(features.SupportGatewayStaticAddresses)},
+		// {Name: gatewayv1.FeatureName(features.SupportGatewayHTTPListenerIsolation)},
+		// {Name: gatewayv1.FeatureName(features.SupportGatewayInfrastructurePropagation)},
+		// {Name: gatewayv1.FeatureName(features.SupportGatewayAddressEmpty)},
+
+		//
+		// HTTPRoute Features
+		//
+
+		{Name: gatewayv1.FeatureName(features.SupportHTTPRoute)},
+		// {Name: gatewayv1.FeatureName(features.SupportHTTPRouteDestinationPortMatching)},
+		// {Name: gatewayv1.FeatureName(features.SupportHTTPRouteBackendRequestHeaderModification)}, // TODO: do we already support this?
+		{Name: gatewayv1.FeatureName(features.SupportHTTPRouteQueryParamMatching)},
+		{Name: gatewayv1.FeatureName(features.SupportHTTPRouteMethodMatching)},
+		{Name: gatewayv1.FeatureName(features.SupportHTTPRouteResponseHeaderModification)},
+		{Name: gatewayv1.FeatureName(features.SupportHTTPRoutePortRedirect)},
+		{Name: gatewayv1.FeatureName(features.SupportHTTPRouteSchemeRedirect)},
+		{Name: gatewayv1.FeatureName(features.SupportHTTPRoutePathRedirect)},
+		// {Name: gatewayv1.FeatureName(features.SupportHTTPRouteHostRewrite)}, // TODO: enable once we support URLRewrite Hostname
+		// {Name: gatewayv1.FeatureName(features.SupportHTTPRoutePathRewrite)}, // TODO: enable once we support URLRewrite Path
+		// {Name: gatewayv1.FeatureName(features.SupportHTTPRouteRequestMirror)},
+		// {Name: gatewayv1.FeatureName(features.SupportHTTPRouteRequestMultipleMirrors)},
+		// {Name: gatewayv1.FeatureName(features.SupportHTTPRouteRequestPercentageMirror)},
+		// {Name: gatewayv1.FeatureName(features.SupportHTTPRouteRequestTimeout)},
+		// {Name: gatewayv1.FeatureName(features.SupportHTTPRouteBackendTimeout)},
+		// {Name: gatewayv1.FeatureName(features.SupportHTTPRouteParentRefPort)},
+		{Name: gatewayv1.FeatureName(features.SupportHTTPRouteBackendProtocolH2C)},
+		{Name: gatewayv1.FeatureName(features.SupportHTTPRouteBackendProtocolWebSocket)},
+
+		//
+		// Mesh Features
+		//
+
+		// {Name: gatewayv1.FeatureName(features.SupportMesh)},
+		// {Name: gatewayv1.FeatureName(features.SupportMeshClusterIPMatching)},
+		// {Name: gatewayv1.FeatureName(features.SupportMeshConsumerRoute)},
+
+		//
+		// Other Features
+		//
+
+		// {Name: gatewayv1.FeatureName(features.SupportGRPCRoute)},
+		{Name: gatewayv1.FeatureName(features.SupportReferenceGrant)},
+		{Name: gatewayv1.FeatureName(features.SupportTLSRoute)}, // TODO: only add if TLSRoute CRDs are installed?
+		{Name: gatewayv1.FeatureName(features.SupportUDPRoute)}, // TODO: only add if UDPRoute CRDs are installed?
 	}
 
 	// The Gateway API spec requires that the supported features array be sorted
