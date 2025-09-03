@@ -621,12 +621,37 @@ func getReconcileRequestsForRoute(ctx context.Context, c client.Client, object m
 // TODO: document
 func (r *GatewayReconciler) enqueueRequestForTLSPolicy() handler.EventHandler {
 	return handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, o client.Object) []reconcile.Request {
-		_, ok := o.(*gatewayv1alpha3.BackendTLSPolicy)
-		if !ok {
+		// Ignore objects that aren't a BackendTLSPolicy.
+		if _, ok := o.(*gatewayv1alpha3.BackendTLSPolicy); !ok {
 			return nil
 		}
-		// TODO: implement the rest of the logic
-		return nil
+
+		log := log.FromContext(ctx)
+
+		// Since BackendTLSPolicies aren't attached to a specific Gateway or
+		// even a route, whenever one is modified we need to reconcile all the
+		// gateways.
+		//
+		// Ideally we would find a more efficient way to handle this, but that
+		// would require indexing Gateways <-> Routes <-> Services, then indexing
+		// the Services all BackendTLSPolicies reference, then using those indexes
+		// to figure out what Gateways we need to reconcile.
+		gwList := &gatewayv1.GatewayList{}
+		if err := r.Client.List(ctx, gwList); err != nil {
+			log.Error(err, "Unable to list Gateways")
+			return nil
+		}
+
+		requests := make([]reconcile.Request, len(gwList.Items))
+		for i, item := range gwList.Items {
+			gw := types.NamespacedName{
+				Namespace: item.Namespace,
+				Name:      item.Name,
+			}
+			requests[i] = reconcile.Request{NamespacedName: gw}
+			log.Info("Enqueued Gateway for resource", "Gateway", gw)
+		}
+		return requests
 	})
 }
 
