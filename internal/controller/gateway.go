@@ -20,6 +20,7 @@ import (
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/matthewpi/certwatcher"
 	corev1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -42,12 +43,11 @@ import (
 	"github.com/caddyserver/gateway/internal/caddy"
 )
 
+// +kubebuilder:rbac:groups=discovery.k8s.io,resources=endpointslices,verbs=get;list;watch
 // +kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=backendtlspolicies,verbs=get;list;watch
 // +kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=gateways,verbs=get;list;watch
 // +kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=gateways/status,verbs=patch;update
 // +kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=referencegrants,verbs=get;list;watch
-
-// +kubebuilder:rbac:groups=core,resources=endpoints,verbs=get;list;watch
 
 type GatewayReconciler struct {
 	client.Client
@@ -144,7 +144,7 @@ func (r *GatewayReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			),
 		).
 		Watches(
-			&corev1.Endpoints{},
+			&discoveryv1.EndpointSlice{},
 			r.enqueueRequestForOwningResource(),
 			builder.WithPredicates(
 				predicate.NewPredicateFuncs(func(object client.Object) bool {
@@ -154,7 +154,7 @@ func (r *GatewayReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			),
 		).
 		Owns(&corev1.Service{}).
-		Owns(&corev1.Endpoints{}).
+		Owns(&discoveryv1.EndpointSlice{}).
 		Complete(r)
 }
 
@@ -301,49 +301,56 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		return ctrl.Result{}, err
 	}
 
-	caddyEps, err := r.getEndpoints(ctx, gw)
+	caddyEpSlice, err := r.getEndpointSlice(ctx, gw)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
-	if len(caddyEps.Subsets) < 1 {
-		return ctrl.Result{}, errors.New("no endpoint subsets found for gateway service")
+	if len(caddyEpSlice.Endpoints) < 1 {
+		return ctrl.Result{}, errors.New("no endpoints available in endpoint slice associated with the gateway")
 	}
 
 	// Configure Caddy in parallel, so when someone runs Caddy as a DaemonSet on
 	// a 5,000 node cluster, we bring the gateway controller to its knees.
 	var wg sync.WaitGroup
-	for _, a := range caddyEps.Subsets[0].Addresses {
-		if a.TargetRef == nil {
+	for _, ep := range caddyEpSlice.Endpoints {
+		if ep.TargetRef == nil || len(ep.Addresses) < 1 {
 			// TODO: log error
 			continue
 		}
 		wg.Add(1)
-		go func(a corev1.EndpointAddress) {
+		go func(ep discoveryv1.Endpoint) {
 			defer wg.Done()
 
 			target := client.ObjectKey{
-				Namespace: a.TargetRef.Namespace,
-				Name:      a.TargetRef.Name,
+				Namespace: ep.TargetRef.Namespace,
+				Name:      ep.TargetRef.Name,
 			}
 
+			// TODO: find a better way to handle this without needing to
+			// clone a TLS config, clone a transport, and create a new HTTP
+			// client, per-endpoint in the slice.
 			tlsConfig := r.tlsConfig.Clone()
 			tlsConfig.ServerName = target.Name + "." + target.Namespace
 			tr := http.DefaultTransport.(*http.Transport).Clone()
 			tr.TLSClientConfig = tlsConfig
 			httpClient := &http.Client{Transport: tr}
 
-			log.V(1).Info("Programming Caddy instance", "ip", a.IP, "target", target)
-			// TODO: configurable scheme and port
-			url := "https://" + net.JoinHostPort(a.IP, "2021") + "/load"
+			// TODO: this cannot be out of bounds since we checked already, but
+			// do we always want to just use the first address?
+			addr := ep.Addresses[0]
+
+			log.V(1).Info("Programming Caddy instance", "ip", addr, "target", target)
+			// TODO: configurable port. We will require TLS for the Admin API.
+			url := "https://" + net.JoinHostPort(addr, "2021") + "/load"
 			req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewBuffer(b))
 			if err != nil {
-				log.Error(err, "Error programming Caddy instance", "ip", a.IP, "target", target)
+				log.Error(err, "Error programming Caddy instance", "ip", addr, "target", target)
 				return
 			}
 			req.Header.Set("Content-Type", "application/json")
 			res, err := httpClient.Do(req)
 			if err != nil {
-				log.Error(err, "Error programming Caddy instance", "ip", a.IP, "target", target)
+				log.Error(err, "Error programming Caddy instance", "ip", addr, "target", target)
 				return
 			}
 			defer func() {
@@ -352,11 +359,11 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 			}()
 			if res.StatusCode != http.StatusOK {
 				b, _ := io.ReadAll(io.LimitReader(res.Body, 4*1024))
-				log.Error(errors.New(string(b)), "Error programming Caddy instance", "status_code", res.StatusCode, "ip", a.IP, "target", target)
+				log.Error(errors.New(string(b)), "Error programming Caddy instance", "status_code", res.StatusCode, "ip", addr, "target", target)
 				return
 			}
-			log.V(1).Info("Successfully programmed Caddy instance", "ip", a.IP, "target", target)
-		}(a)
+			log.V(1).Info("Successfully programmed Caddy instance", "ip", addr, "target", target)
+		}(ep)
 	}
 	wg.Wait()
 
@@ -397,15 +404,15 @@ func (r *GatewayReconciler) getService(ctx context.Context, gw *gatewayv1.Gatewa
 	return &svcList.Items[0], nil
 }
 
-func (r *GatewayReconciler) getEndpoints(ctx context.Context, gw *gatewayv1.Gateway) (*corev1.Endpoints, error) {
-	epsList := &corev1.EndpointsList{}
+func (r *GatewayReconciler) getEndpointSlice(ctx context.Context, gw *gatewayv1.Gateway) (*discoveryv1.EndpointSlice, error) {
+	epsList := &discoveryv1.EndpointSliceList{}
 	if err := r.Client.List(ctx, epsList, client.MatchingLabels{
 		owningGatewayLabel: gw.Name,
 	}); err != nil {
 		return nil, err
 	}
 	if len(epsList.Items) == 0 {
-		return nil, fmt.Errorf("no endpoints found")
+		return nil, fmt.Errorf("no endpoint slices found")
 	}
 	return &epsList.Items[0], nil
 }
