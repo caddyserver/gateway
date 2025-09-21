@@ -48,11 +48,11 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           sbom: true
-          tags: ghcr.io/caddyserver/gateway:caddy-2.10.0
+          tags: ghcr.io/caddyserver/gateway:caddy-2.10.2
           build-args: |
-            CADDY_VERSION=2.10.0
-            CADDY_BUILDER_HASH=sha256:9edca605c07c8b5425d1985b4d4a1796329b11c3eba0b55f938e01916dcd96c8
-            CADDY_HASH=sha256:30ccf0cb027e1d06cd6e453c04fc1c8eec665629b22ed69602c14c8a0512ead0
+            CADDY_VERSION=2.10.2
+            CADDY_BUILDER_HASH=sha256:13bf132b50ab5a3abd4d62d4da27a9d8fd98818028746fe85e745d73e3e71f3d
+            CADDY_HASH=sha256:87aa104ed6c658991e1b0672be271206b7cd9fec452d1bf3ed9ad6f8ab7a2348
 
       - name: Attest
         uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v3.0.0

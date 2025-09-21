@@ -1,17 +1,17 @@
 # This Containerfile is used to build Caddy with the additional modules required by Caddy Gateway
 # to function properly.
 
-ARG CADDY_VERSION=2.10.0
+ARG CADDY_VERSION=2.10.2
 
-ARG CADDY_BUILDER_HASH=sha256:9edca605c07c8b5425d1985b4d4a1796329b11c3eba0b55f938e01916dcd96c8
-ARG CADDY_HASH=sha256:30ccf0cb027e1d06cd6e453c04fc1c8eec665629b22ed69602c14c8a0512ead0
+ARG CADDY_BUILDER_HASH=sha256:13bf132b50ab5a3abd4d62d4da27a9d8fd98818028746fe85e745d73e3e71f3d
+ARG CADDY_HASH=sha256:87aa104ed6c658991e1b0672be271206b7cd9fec452d1bf3ed9ad6f8ab7a2348
 
 FROM docker.io/library/caddy:${CADDY_VERSION}-builder@${CADDY_BUILDER_HASH} AS builder
 
 RUN XCADDY_SETCAP=0 \
 	XCADDY_SUDO=0 \
 	xcaddy build \
-    --with github.com/mholt/caddy-l4@4d3c80e89c5f80438a3e048a410d5543ff5fb9f4
+    --with github.com/mholt/caddy-l4@4a517a98d7fa82d0e18ec3a852722fd406a3a0ae
 
 FROM docker.io/library/caddy:${CADDY_VERSION}@${CADDY_HASH}
 
