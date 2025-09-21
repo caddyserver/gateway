@@ -6,12 +6,24 @@ package layer4
 // Match .
 // TODO: document
 type Match struct {
-	TLS *MatchTLS `json:"tls,omitempty"`
+	DNS      *MatchDNS      `json:"dns,omitempty"`
+	Postgres *MatchPostgres `json:"postgres,omitempty"`
+	SSH      *MatchSSH      `json:"ssh,omitempty"`
+	TLS      *MatchTLS      `json:"tls,omitempty"`
 }
 
 func (m *Match) IsEmpty() bool {
 	if m == nil {
 		return true
+	}
+	if !m.DNS.IsEmpty() {
+		return false
+	}
+	if !m.Postgres.IsEmpty() {
+		return false
+	}
+	if !m.SSH.IsEmpty() {
+		return false
 	}
 	if !m.TLS.IsEmpty() {
 		return false
@@ -19,7 +31,45 @@ func (m *Match) IsEmpty() bool {
 	return true
 }
 
+// MatchDNS .
+// TODO: document
+type MatchDNS struct {
+	Allow       MatchDNSRules `json:"allow,omitempty"`
+	Deny        MatchDNSRules `json:"deny,omitempty"`
+	DefaultDeny bool          `json:"default_deny,omitzero"`
+	PreferAllow bool          `json:"prefer_allow,omitzero"`
+}
+
+func (m *MatchDNS) IsEmpty() bool {
+	// None of the DNS options are required, so we are only empty if nil.
+	return m == nil
+}
+
+type MatchDNSRules []*MatchDNSRule
+
+type MatchDNSRule struct {
+	Class       string `json:"class,omitempty"`
+	ClassRegexp string `json:"class_regexp,omitempty"`
+	Name        string `json:"name,omitempty"`
+	NameRegexp  string `json:"name_regexp,omitempty"`
+	Type        string `json:"type,omitempty"`
+	TypeRegexp  string `json:"type_regexp,omitempty"`
+}
+
+// MatchPostgres .
+// TODO: document
+type MatchPostgres struct{}
+
+func (m *MatchPostgres) IsEmpty() bool { return m == nil }
+
+// MatchSSH .
+// TODO: document
+type MatchSSH struct{}
+
+func (m *MatchSSH) IsEmpty() bool { return m == nil }
+
 // MatchTLS .
+// TODO: document
 type MatchTLS struct {
 	SNI MatchSNI `json:"sni,omitempty"`
 }

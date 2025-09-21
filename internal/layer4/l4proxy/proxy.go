@@ -18,7 +18,7 @@ func (HandlerName) MarshalJSON() ([]byte, error) {
 type Handler struct {
 	// Handler is the name of this handler for the JSON config.
 	// DO NOT USE this. This is a special value to represent this handler.
-	// It will be overwritten when we are marshalled.
+	// It will be overwritten when we are marshaled.
 	Handler HandlerName `json:"handler"`
 
 	// Upstreams is the list of backends to proxy to.
