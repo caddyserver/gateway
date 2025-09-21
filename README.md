@@ -126,7 +126,3 @@ open-source projects.
 I'd like to thank the [Cilium](https://github.com/cilium/cilium/) maintainers and community
 contributors for building the base logic for the controller implementation, allowing me to focus
 on Caddy integration rather than Gateway API semantics.
-
-## Known Issues
-
-- Modifying a BackendTLSPolicy will not trigger reconciliation of the Gateway.
