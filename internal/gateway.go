@@ -11,7 +11,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 )
 
@@ -46,7 +45,7 @@ func IsService(be gatewayv1.BackendObjectReference) bool {
 }
 
 // IsPolicyTargetService checks if the given PolicyTargetReference references a Service resource.
-func IsLocalPolicyTargetService(be gatewayv1alpha2.LocalPolicyTargetReference) bool {
+func IsLocalPolicyTargetService(be gatewayv1.LocalPolicyTargetReference) bool {
 	return be.Group == corev1.GroupName && be.Kind == "Service"
 }
 

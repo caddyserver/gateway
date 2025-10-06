@@ -40,7 +40,7 @@ for any Route resources and is where your requests will be processed.
 
 ## Gateway API Support
 
-Requires Gateway API v1.3.0 CRDs to be installed on your cluster (some experimental CRDs are supported but are optional)
+Requires Gateway API v1.4.0 CRDs to be installed on your cluster (some experimental CRDs are supported but are optional)
 
 ### Resource Support
 
@@ -74,11 +74,11 @@ We recommend installing all Gateway API CRDs, including those that are experimen
 
 ```bash
 # Install Gateway API CRDs (including those that are experimental)
-kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.3.0/experimental-install.yaml
+kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.4.0/experimental-install.yaml
 
 # Install Gateway API CRDs (only stable resources)
 # NOTE: **Do not use this command if you already ran the `experimental-install`**
-kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.3.0/standard-install.yaml
+kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.4.0/standard-install.yaml
 ```
 
 ### Installing the Controller and Caddy
