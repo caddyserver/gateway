@@ -47,6 +47,11 @@
             kubernetes-controller-tools
             kustomize
             operator-sdk
+
+            goreleaser
+            ko
+            syft
+            cosign
           ];
         };
 
