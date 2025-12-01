@@ -8,10 +8,10 @@ require (
 	github.com/matthewpi/certwatcher v1.2.0
 	github.com/onsi/ginkgo/v2 v2.27.1
 	github.com/onsi/gomega v1.38.2
-	k8s.io/api v0.34.1
+	k8s.io/api v0.34.2
 	k8s.io/apiextensions-apiserver v0.34.1
-	k8s.io/apimachinery v0.34.1
-	k8s.io/client-go v0.34.1
+	k8s.io/apimachinery v0.34.2
+	k8s.io/client-go v0.34.2
 	sigs.k8s.io/controller-runtime v0.22.3
 	sigs.k8s.io/gateway-api v1.4.0
 )
