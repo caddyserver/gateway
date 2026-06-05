@@ -104,6 +104,17 @@ func CheckGatewayRouteKindAllowed(input Input, parentRef gatewayv1.ParentReferen
 			continue
 		}
 
+		// Only evaluate the listener(s) this route actually targets. A route
+		// pinned to a listener via sectionName must not be rejected because a
+		// *different* listener on the same Gateway restricts its allowed kinds.
+		// Without this guard, a single kind-restricted listener (e.g. a TCP
+		// listener with allowedRoutes.kinds=[TCPRoute]) rejects every HTTPRoute
+		// on the Gateway. Mirrors the sectionName guard in
+		// CheckGatewayAllowedForNamespace.
+		if parentRef.SectionName != nil && listener.Name != *parentRef.SectionName {
+			continue
+		}
+
 		allowed := false
 		routeGVK := input.GetGVK()
 		for _, kind := range listener.AllowedRoutes.Kinds {
