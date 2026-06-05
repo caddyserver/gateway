@@ -5,7 +5,9 @@ package caddy
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
+	"os"
 	"strconv"
 	"time"
 
@@ -76,7 +78,24 @@ func (i *Input) Config() ([]byte, error) {
 		}
 	}
 	if len(i.httpServers) > 0 {
+		// Load the optional pre-filter route (geo-block + WAF + rate_limit,
+		// etc.) once. It is prepended to every HTTP server so it runs before
+		// any route-derived handlers. The upstream controller replaces the
+		// whole Caddy config on every /load, which would otherwise discard the
+		// data plane's bootstrap pre-filter — injecting it here means the
+		// policy survives every reconcile. See preFilterRoute.
+		preRoute, err := preFilterRoute()
+		if err != nil {
+			return nil, err
+		}
 		for _, s := range i.httpServers {
+			// Prepend the pre-filter so it runs first (before app routes and
+			// the catch-all). Its handlers are non-terminal pass-throughs that
+			// only write a response when they actively block a request.
+			if preRoute != nil {
+				s.Routes = append([]caddyhttp.Route{*preRoute}, s.Routes...)
+			}
+
 			// For all servers register a catch-all route that will match any
 			// request that didn't already get handled.
 			s.Routes = append(s.Routes, caddyhttp.Route{
@@ -116,6 +135,42 @@ func (i *Input) Config() ([]byte, error) {
 		}
 	}
 	return json.Marshal(i.config)
+}
+
+// PreFilterPathEnv is the environment variable naming a file that holds a JSON
+// array of Caddy HTTP handler objects to run, in order, in front of every
+// route on every HTTP server (e.g. blocker/coraza_waf/rate_limit). If unset or
+// empty, no pre-filter is injected.
+const PreFilterPathEnv = "CADDY_PREFILTER_PATH"
+
+// preFilterRoute reads the pre-filter handler list from the file named by
+// PreFilterPathEnv and returns a single non-terminal, matcher-less Route
+// carrying those handlers (so they run against every request and fall through
+// when they don't block). Returns (nil, nil) when the env var is unset/empty.
+// A configured-but-unreadable/invalid file returns an error so the controller
+// fails the reconcile loudly rather than silently shipping an unprotected edge
+// (the data plane keeps serving its last-good config in the meantime).
+func preFilterRoute() (*caddyhttp.Route, error) {
+	path := os.Getenv(PreFilterPathEnv)
+	if path == "" {
+		return nil, nil
+	}
+	b, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("reading pre-filter config %q: %w", path, err)
+	}
+	var raw []json.RawMessage
+	if err := json.Unmarshal(b, &raw); err != nil {
+		return nil, fmt.Errorf("pre-filter config %q must be a JSON array of handler objects: %w", path, err)
+	}
+	if len(raw) == 0 {
+		return nil, nil
+	}
+	handlers := make([]caddyhttp.Handler, 0, len(raw))
+	for _, h := range raw {
+		handlers = append(handlers, caddyhttp.RawHandler(h))
+	}
+	return &caddyhttp.Route{Handlers: handlers}, nil
 }
 
 func (i *Input) handleListener(l gatewayv1.Listener) error {
